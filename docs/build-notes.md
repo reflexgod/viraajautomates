@@ -14,9 +14,10 @@ Kept up to date during the build. Newest status first. The quality reference is 
 | Part D, owner answers | Applied (table below) |
 | Pre-launch checks (`node scripts/check-launch.mjs`) | 60/60 pass |
 | Lighthouse mobile | Home 92 / 96 / 100 / 100, case study 95 / 96 / 100 / 100 |
-| GitHub repo, Pages, DNS | Waiting for the owner's choice on how to publish the history (see "Publishing") |
+| GitHub repo, Pages | Live: https://reflexgod.github.io/viraajautomates/ (repo reflexgod/viraajautomates, public, one clean snapshot commit) |
+| Custom domain, DNS | Owner steps below |
 
-**Where to resume:** Part E, step 6 (push). Everything before it is done and committed.
+**Where to resume:** Part E, step 7 (custom domain and DNS, owner steps below). Everything else is done, pushed and live.
 
 ## How to work on the site
 
@@ -117,7 +118,7 @@ GIFs and stills: `docs/screenshots/launch-c/` (`c1-c2-desktop.gif`, `c1-phone.gi
 
 ## Publishing
 
-The GitHub repo does not exist yet and nothing has been pushed. Earlier commits in this local history contain the old demo screenshots (with the original names) and older wording; pushing the full history would publish them. Options: push the whole history, or push one clean snapshot commit (the full history stays on this computer in a local branch).
+Published as one clean snapshot commit (owner's choice, 26 Oct 2026). The full build history stays on this computer in the local branch `history-local` (never pushed): its older commits contain the earlier demo screenshots with the original names and older wording. Older review screenshots are in `docs/screenshots-local/` (git-ignored). Pushing to `main` redeploys the site automatically.
 
 ## Deploy and DNS (after the push)
 
