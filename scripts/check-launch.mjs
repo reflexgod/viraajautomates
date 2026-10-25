@@ -5,6 +5,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 import { checkScroll } from './check-scroll.mjs';
+import { checkHow } from './check-how.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -38,10 +39,16 @@ const siteText = files.map((f) => [f, readFileSync(f, 'utf8')]);
 const method = new RegExp(Buffer.from('bjhufGdlbWluaXxvcGVuYWl8XGJWUFNcYnxwYWdlc3BlZWR8Z29vZ2xlXC5jb21cL3NlYXJjaHx2aWV3LXNvdXJjZXxsaWdodGhvdXNl', 'base64').toString(), 'i');
 const methodHits = siteText.filter(([, t]) => method.test(t)).map(([f, t]) => `${f}: ${t.match(method)[0]}`);
 report('No stack or method named in the site (tool names, test links)', methodHits.length === 0, methodHits.join(' | '));
-// The demo clinic is linked only as its home page or with Riya's chat open, always in a new tab.
-const demoLinks = siteText.flatMap(([f, t]) => [...t.matchAll(/<a [^>]*href="(https:\/\/demo\.viraajautomates\.tech[^"]*)"[^>]*>/g)].map((m) => [f, m[1], m[0]]));
-const demoBad = demoLinks.filter(([, u, tag]) => !['https://demo.viraajautomates.tech/', 'https://demo.viraajautomates.tech/?riya=open'].includes(u) || !/target="_blank"/.test(tag) || !/rel="noopener"/.test(tag));
-report(`Demo clinic links: home page or ?riya=open, new tab (${demoLinks.length} links)`, demoLinks.length > 0 && demoBad.length === 0, demoBad.map(([f, u]) => `${f} ${u}`).join(' | '));
+// The demo site is never linked (owner, 26 Oct 2026): visitors ask on WhatsApp instead.
+const demoHost = ['demo', 'viraajautomates', 'tech'].join('.');
+const demoHits = siteText.filter(([, t]) => t.includes(demoHost) || t.includes('riya=open')).map(([f]) => f);
+report('Zero links to the demo site in the site files', demoHits.length === 0, demoHits.join(' '));
+// No speed claims (owner, 26 Oct 2026).
+const speed = /in seconds|within seconds|instant|within the hour|in minutes|lightning|blazing/i;
+// Visitor-facing text lives in the pages and in the two scripts that write sentences.
+const speedHits = siteText.filter(([f]) => /\.html$|clock\.js$|message\.js$/.test(f)).filter(([, t]) => speed.test(t.replace(/<script[\s\S]*?<\/script>/g, ''))).map(([f, t]) => `${f}: ${t.match(speed)[0]}`);
+report('No speed claims ("in seconds" and the like)', speedHits.length === 0, speedHits.join(' | '));
+report('No "Sample" names left (fictional names, captions say "names changed")', !siteText.some(([f, t]) => f.endsWith('.html') && /[A-Z][a-z]+ Sample/.test(t)));
 report('No "small business" anywhere a visitor can read', !siteText.some(([, t]) => /small business/i.test(t)));
 const copy = html.map((f) => readFileSync(f, 'utf8')).join('\n');
 report('No "reminders" claim anywhere', !/remind/i.test(copy));
@@ -87,6 +94,9 @@ const fresh = async (opts = {}, seen = true) => {
     // Captions: every figure caption says "Demo"
     const caps = await page.evaluate(() => [...document.querySelectorAll('main figcaption')].map((c) => c.textContent.trim()));
     if (caps.length) { const bad = caps.filter((c) => !/Demo/.test(c)); report(`Every caption on ${path} says "Demo" (${caps.length})`, bad.length === 0, bad.join(' | ')); }
+    // A caption whose picture shows a (fictional) name ends "Demo · names changed".
+    const named = await page.evaluate(() => [...document.querySelectorAll('main figure')].filter((f) => /Asha Rao/.test(f.textContent + [...f.querySelectorAll('img')].map((i) => i.alt).join(' '))).map((f) => f.querySelector('figcaption')?.textContent.trim() || '(no caption)'));
+    if (named.length) { const badN = named.filter((c) => !/Demo · names changed$/.test(c)); report(`Captions showing a name end "Demo · names changed" on ${path} (${named.length})`, badN.length === 0, badN.join(' | ')); }
     // Section labels: one format, "( Word )"
     const labels = await page.evaluate(() => [...document.querySelectorAll('.t-label')].map((l) => l.textContent.trim().replace(/\s+/g, ' ')));
     const badL = labels.filter((l) => !/^\( [^()]+ \)$/.test(l));
@@ -110,8 +120,8 @@ const fresh = async (opts = {}, seen = true) => {
   report('Every link works (internal pages, anchors, email)', broken.length === 0, broken.join(' | '));
   const waBad = wa.filter((h) => { const u = new URL(h); return u.pathname !== '/919653375679' || !u.searchParams.get('text'); });
   const texts = new Set(wa.map((h) => new URL(h).searchParams.get('text')));
-  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.'];
-  report('WhatsApp prefilled texts: free check, Google, website, question', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
+  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
+  report('WhatsApp prefilled texts: free check, Google, website, question, live demo', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
   report(`Every WhatsApp link opens +91 96533 75679 with prefilled text (${wa.length} links)`, wa.length > 0 && waBad.length === 0, [...new Set(wa.map((h) => new URL(h).searchParams.get('text')))].map((t) => `"${t}"`).join(' / '));
   await ctx.close();
 }
@@ -139,6 +149,9 @@ const fresh = async (opts = {}, seen = true) => {
 
 // ---------- Nothing looks empty (scripts/check-scroll.mjs) ----------
 await checkScroll({ browser, fresh, report, base: BASE });
+
+// ---------- How it works never overlaps (scripts/check-how.mjs) ----------
+await checkHow({ browser, base: BASE, report });
 
 // ---------- Intro ----------
 {
@@ -236,7 +249,7 @@ await checkScroll({ browser, fresh, report, base: BASE });
     if (!f.ring) noRing.push(f.label);
   }
   report('Keyboard: every focused element shows a 2 px outline', noRing.length === 0, noRing.slice(0, 6).join(' | '));
-  report('Keyboard: Tab reaches the service titles, buttons and footer links', ['Local SEO', 'Websites', 'Riya, AI receptionist', 'Automations', 'Find out where you stand on Google', 'Chat with Riya now', 'Read the full case study', 'Get my free check'].every((t) => seen.some((s) => s.includes(t))), `${seen.length} stops`);
+  report('Keyboard: Tab reaches the service titles, buttons and footer links', ['Local SEO', 'Websites', 'Riya, AI receptionist', 'Automations', 'Find out where you stand on Google', 'Ask me for a live demo', 'Read the full case study', 'Get my free check'].every((t) => seen.some((s) => s.includes(t))), `${seen.length} stops`);
   // Menu: focus trap, Escape, focus return
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.focus('[data-menu-btn]');

@@ -8,9 +8,8 @@ export const SITE = {
   email: 'viraaj.automates@gmail.com',
   whatsapp: '919653375679',
   whatsappDisplay: '+91 96533 75679',
-  // The demo clinic Riya answers on; ?riya=open opens her chat.
-  demoUrl: 'https://demo.viraajautomates.tech/',
-  riyaUrl: 'https://demo.viraajautomates.tech/?riya=open',
+  // "Ask me for a live demo" opens WhatsApp with this; the demo site itself is never linked.
+  liveDemoText: 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?',
   freeCheckText: "Hi Viraaj, I'd like the free check. Business name: ",
   city: 'Mumbai',
   timeZone: 'Asia/Kolkata',

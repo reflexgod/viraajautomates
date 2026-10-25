@@ -226,11 +226,12 @@
 
 /* ---------- Live, desktop: pinned board ---------- */
 @media (min-width: 1024px) {
+  /* No fixed heights: each step's row is as tall as its content (inactive
+     steps show only number and title), and the stage is as tall as its
+     tallest panel; the last row takes whatever height is left. */
   .how.is-live .how__board {
-    /* The buttons pin with the board, so both fit one screen under the nav bar */
-    --stage-h: min(35rem, calc(100svh - 300px));
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-    height: var(--stage-h);
+    grid-template-rows: auto auto auto auto 1fr;
+    align-items: start;
   }
   .how.is-live .how__list, .how.is-live .how__item { display: contents; }
   .how.is-live .how__item::before { display: none; }
@@ -257,8 +258,8 @@
     position: relative;
     z-index: 1;
     grid-column: 4 / 7;
-    align-self: center;
-    padding-left: 34px;
+    align-self: start;
+    padding: 0 0 26px 34px;
     opacity: .4;
     transition: opacity .45s var(--ease);
   }
@@ -267,11 +268,13 @@
   .how.is-live .how__item:nth-child(3) .how__step { grid-row: 3; }
   .how.is-live .how__item:nth-child(4) .how__step { grid-row: 4; }
   .how.is-live .how__item.is-active .how__step { opacity: 1; }
+  .how.is-live .how__item:not(.is-active) .how__text { display: none; }
+  .how.is-live .how__text { margin-top: 8px; }
   /* The thin plum rule beside the live step, drawn over the cable */
   .how.is-live .how__step::before {
     content: "";
     position: absolute;
-    left: 6px; top: -10px; bottom: -10px;
+    left: 6px; top: -6px; bottom: 14px;
     width: 2px;
     background: var(--ground);
     transform: scaleY(0);
@@ -279,13 +282,14 @@
   }
   .how.is-live .how__item.is-active .how__step::before { transform: none; }
   .how.is-live .how__tab { cursor: pointer; }
+  /* Every panel sits in the same cell; only the active one shows */
   .how.is-live .how__visual {
     grid-column: 7 / 13;
-    grid-row: 1 / 5;
-    justify-content: center;
-    height: var(--stage-h);
+    grid-row: 1 / 6;
+    align-self: start;
   }
-  .how.is-live .how__visual .phone { height: calc(var(--stage-h) - 40px); }
+  /* The buttons pin with the board, so both fit one screen under the nav bar */
+  .how.is-live .how__visual .phone { height: min(30rem, calc(100svh - 330px)); }
 }
 
 /* ---------- Live, below 1024 px: tabs over one stage ---------- */
@@ -345,6 +349,11 @@
   .how.is-live .how__name { font-size: 1.0625rem; }
   .how__visual .phone, .how.is-live .how__visual .phone { height: 25rem; width: 100%; }
 }
+
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .how.is-live .how__item.is-active .how__text { animation: how-text .45s var(--ease) both; }
+}
+@keyframes how-text { from { opacity: 0; transform: translateY(6px); } }
 
 /* ---------- Live, both: only the active panel is shown ---------- */
 .how.is-live .how__visual { visibility: hidden; opacity: 0; transition: opacity .35s var(--ease), visibility 0s linear .35s; }

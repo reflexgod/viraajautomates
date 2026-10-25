@@ -13,3 +13,5 @@ scripts/.study/
 .scroll-check/
 # Older review screenshots, kept on this computer only (they show earlier wording and names)
 docs/screenshots-local/
+# Notes, studies and screenshots stay on this computer only (owner, 26 Oct 2026)
+docs/

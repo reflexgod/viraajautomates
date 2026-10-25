@@ -1,5 +1,5 @@
 // Crops the raw demo screenshots into clean images for the site. Every name in
-// them is replaced with a clearly fictional "Sample" name (owner, 26 Oct 2026):
+// them is replaced with a fictional name (owner, 26 Oct 2026; captions say "names changed"):
 // re-set in the screenshot's own font where it can be fitted exactly (the
 // sheet, the email body), or cut out of the line with the screenshot's own
 // pixels where it can't (the email subject, the calendar title).
@@ -74,7 +74,7 @@ async function stack(strips, { pad = 32, gap = 24, background }) {
   bodyRaw = await retype(bodyRaw, [{
     fixed: { font: 'Arial', size: 19.5, x: 6, y: 21.5 },
     cover: { x: 0, y: 2, w: 262, h: 27 },
-    text: 'Name: Asha Sample',
+    text: 'Name: Asha Rao',
   }, {
     ref: { x: 0, y: 31, w: 180, h: 27, text: 'Phone: 999999999' },
     fonts: ['Arial'], sizes: [17, 24], maxX: 12,
@@ -94,25 +94,25 @@ async function stack(strips, { pad = 32, gap = 24, background }) {
   const header = await crop(RAW + 'sheet.png', { left: 70, top: 288, width: 1578, height: 46 });
   const rows = await crop(RAW + 'sheet.png', { left: 70, top: 353, width: 1578, height: 450 });
   const sheet = await stack([header, rows], { pad: 0, gap: 0, background: '#FFFFFF' });
-  // Every name becomes a clearly fictional "Sample" name and the three
+  // Every name becomes a fictional name and the three
   // part-masked emails read "Not provided", in the sheet's own font.
   // The last row (the booking followed on this site), re-set in the same font:
   // the phone in the same masked format as every other row ("99999 XXX99"),
   // and "Pain in lower teeth" with the capitals used everywhere else.
   const fixed = await retype(sheet, [
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 74.5 }, cover: { x: 3, y: 50, w: 163, h: 37 }, text: 'Kabir Sample' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 119.5 }, cover: { x: 3, y: 95, w: 163, h: 37 }, text: 'Isha Sample' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 164.5 }, cover: { x: 3, y: 140, w: 163, h: 37 }, text: 'Tara Sample' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 74.5 }, cover: { x: 3, y: 50, w: 163, h: 37 }, text: 'Kabir Malhotra' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 119.5 }, cover: { x: 3, y: 95, w: 163, h: 37 }, text: 'Isha Kulkarni' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 164.5 }, cover: { x: 3, y: 140, w: 163, h: 37 }, text: 'Tara Menon' },
     { fixed: { font: 'Roboto', size: 20, x: 333, y: 164.5 }, cover: { x: 327, y: 140, w: 213, h: 37 }, text: 'Not provided' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 209.5 }, cover: { x: 3, y: 185, w: 163, h: 37 }, text: 'Rohan Sample' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 254.5 }, cover: { x: 3, y: 230, w: 163, h: 37 }, text: 'Nikhil Sample' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 209.5 }, cover: { x: 3, y: 185, w: 163, h: 37 }, text: 'Rohan Bhatt' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 254.5 }, cover: { x: 3, y: 230, w: 163, h: 37 }, text: 'Nikhil Sawant' },
     { fixed: { font: 'Roboto', size: 20, x: 333, y: 254.5 }, cover: { x: 327, y: 230, w: 213, h: 37 }, text: 'Not provided' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 299.5 }, cover: { x: 3, y: 275, w: 163, h: 37 }, text: 'Pooja Sample' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 344.5 }, cover: { x: 3, y: 320, w: 163, h: 37 }, text: 'Aman Sample' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 389.5 }, cover: { x: 3, y: 365, w: 163, h: 37 }, text: 'Zara Sample' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 434.5 }, cover: { x: 3, y: 410, w: 163, h: 37 }, text: 'Kunal Sample' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 299.5 }, cover: { x: 3, y: 275, w: 163, h: 37 }, text: 'Pooja Gokhale' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 344.5 }, cover: { x: 3, y: 320, w: 163, h: 37 }, text: 'Aman Sethi' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 389.5 }, cover: { x: 3, y: 365, w: 163, h: 37 }, text: 'Zara Siddiqui' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 434.5 }, cover: { x: 3, y: 410, w: 163, h: 37 }, text: 'Kunal Bose' },
     { fixed: { font: 'Roboto', size: 20, x: 333, y: 434.5 }, cover: { x: 327, y: 410, w: 213, h: 37 }, text: 'Not provided' },
-    { fixed: { font: 'Roboto', size: 20, x: 11, y: 479.5 }, cover: { x: 3, y: 455, w: 163, h: 37 }, text: 'Asha Sample' },
+    { fixed: { font: 'Roboto', size: 20, x: 11, y: 479.5 }, cover: { x: 3, y: 455, w: 163, h: 37 }, text: 'Asha Rao' },
     { ref: { x: 176, y: 457, w: 125, h: 30, text: '99999XX99' }, fonts: ['Roboto', 'Arial'], sizes: [16, 24], maxX: 12, cover: { x: 176, y: 455, w: 152, h: 34 }, text: '99999 XXX99' },
     { ref: { x: 543, y: 457, w: 190, h: 30, text: 'Pain in Lower Teeth' }, fonts: ['Roboto', 'Arial'], sizes: [16, 24], maxX: 12, cover: { x: 543, y: 455, w: 210, h: 34 }, text: 'Pain in lower teeth' },
   ]);

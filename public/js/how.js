@@ -42,6 +42,8 @@ export function initHow({ gsap, loadScrollTrigger, lenis }) {
       panels[n].setAttribute('aria-hidden', String(n !== i));
       if (n === i) tabs[n].setAttribute('aria-current', 'step'); else tabs[n].removeAttribute('aria-current');
     });
+    // The live step shows its paragraph, so the jacks below it move: measure again.
+    measure();
     if (!wide.matches) moveSignal(i);
     const panel = panels[i];
     if (animate && prev !== -1) {
@@ -75,15 +77,16 @@ export function initHow({ gsap, loadScrollTrigger, lenis }) {
   // first half, then travels to the next one, arriving as that step goes live.
   // SPAN parts of the pin: step 04 goes live at 3 / SPAN (about 91%).
   const SPAN = 3.3;
+  window.__howSpan = SPAN;   // read by scripts/check-how.mjs
   const ease = gsap.parseEase('house');
   function scrub(p) {
     const q = Math.min(3.999, Math.max(0, p * SPAN));
     const k = Math.floor(q);
     const t = q - k;
+    setActive(k);
     const travel = k < 3 && t > 0.5 ? ease((t - 0.5) / 0.5) : 0;
     const y = jacks[k] + (k < 3 ? (jacks[k + 1] - jacks[k]) * travel : 0);
     signal.style.transform = `translateY(${y}px)`;
-    setActive(k);
   }
 
   /* ---------- Desktop pin / mobile tabs ---------- */
