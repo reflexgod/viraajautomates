@@ -54,6 +54,20 @@ const copy = html.map((f) => readFileSync(f, 'utf8')).join('\n');
 report('No "reminders" claim anywhere', !/remind/i.test(copy));
 report('No "Line 01" / "Line open" labels left', !/\(\s*Line\b|Line open|No line here/.test(copy));
 report('No badges drawn on images', !/snap__tag|class="[^"]*badge/.test(copy));
+// Round 3 (owner, 26 Oct 2026): honest limits, one WhatsApp link per service, no locked report.
+report('No "unless you\'ve added them" anywhere', !/unless you(?:'|&#39;|’)ve added them/i.test(copy));
+report('No "every customer" / "never miss" claims', !/every customer|never miss/i.test(copy));
+const demoCta = (index.match(/>Ask me for a live demo/g) || []).length;
+report('"Ask me for a live demo" at most twice on the home page (hero, How it works)', demoCta >= 1 && demoCta <= 2, `${demoCta}x`);
+const rows = index.split('<li class="row" data-row>').slice(1).map((r) => r.slice(0, r.indexOf('</details>')));
+const rowBad = rows.filter((r) => {
+  const title = r.match(/<h3 class="row__title">([\s\S]*?)<\/h3>/)?.[1] || '';
+  return /<a\b/.test(title) || !/<button class="pw" type="button" data-preview="\w+"/.test(title) || (r.match(/href="https:\/\/wa\.me\//g) || []).length !== 1;
+}).map((r) => r.match(/class="pw__word">([^<]+)/)?.[1] || '?');
+report('Service titles open a preview, never WhatsApp; each row has exactly one WhatsApp link', rows.length === 4 && rowBad.length === 0, rowBad.join(' | '));
+report('Free check: no locked report card, no "Unlock", one "Send me your business name" button', !/data-report|report__|unlock/i.test(index) && (index.match(/>Send me your business name</g) || []).length === 1);
+report('FAQ "Is my customers\' data safe?" names the AI service and the automation server', index.includes('Requests are saved in your own Google Sheet and inbox. To reply, messages pass through the AI service and the automation server I run. Riya never gives a diagnosis or fees.'));
+report('Privacy notice names the AI service and the automation server as processors', /AI service and the automation server I run\. Both act as processors/.test(readFileSync('public/privacy.html', 'utf8')));
 
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader'] });
 const fresh = async (opts = {}, seen = true) => {
@@ -225,6 +239,30 @@ await checkHow({ browser, base: BASE, report });
   const vis = await page.evaluate(() => getComputedStyle(document.querySelector('[data-pcard]')).visibility === 'visible');
   const under = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('.pw')?.dataset.preview || null, box);
   report('Hover card: hover "Viraaj", scroll without moving the mouse: the card hides (or switches) with the page', shown && (under ? vis : !vis), `shown ${shown}, visible after scroll ${vis}, trigger under pointer: ${under}`);
+  await ctx.close();
+}
+
+// ---------- Service titles open their preview (lightbox), never a new tab ----------
+{
+  const ctx = await fresh();
+  const page = await ctx.newPage();
+  let popups = 0;
+  ctx.on('page', () => { popups++; });
+  await page.goto(BASE + '/', { waitUntil: 'load' });
+  await page.waitForTimeout(2500);
+  const opened = [];
+  for (const key of ['seo', 'websites', 'riya', 'automations']) {
+    const t = page.locator(`.row__title [data-preview="${key}"] .pw__word`);
+    await t.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    await t.click();
+    await page.waitForTimeout(700);
+    const ok = await page.evaluate(() => { const d = document.querySelector('[data-lightbox]'); return d.open && d.querySelector('[data-lightbox-media]').children.length > 0; });
+    opened.push(`${key}: ${ok ? 'preview' : 'nothing'}`);
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+  }
+  report('Each service title opens its preview, and no title opens WhatsApp', opened.every((o) => o.endsWith('preview')) && popups === 0, `${opened.join(', ')}; new tabs ${popups}`);
   await ctx.close();
 }
 

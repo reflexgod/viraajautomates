@@ -1,4 +1,4 @@
-// Preview words (the About photo): an underlined trigger that shows what it names.
+// Preview words (the About photo and the service titles): an underlined trigger that shows what it names.
 // Fine pointer: one card follows the pointer (24 px below and right), tilts with
 // horizontal speed, and the next item's media wipes up through the same card.
 // Keyboard: focus shows the card under the trigger; Escape closes it.
@@ -10,12 +10,21 @@
 // When a [data-sweep] block first reaches 70% of the viewport, its triggers light in turn.
 import { openLightbox } from './lightbox.js';
 import { whenSeen } from './scroll.js';
+import { REAL_PHOTOS } from './real-photos.js';
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Every item is real: today only the photo of me in the About line.
+// Every item is real: a photo, a demo screenshot, the demo video, or a card drawn in code.
+// The service titles open these and nothing else (each row's WhatsApp link is its own line).
 const ITEMS = {
   viraaj: { kind: 'image', src: 'images/viraaj-480.webp', full: 'images/viraaj-960.webp', fallback: 'images/viraaj.jpg', ratio: '4 / 5', caption: 'Viraaj · Mumbai', alt: 'Viraaj, who builds and looks after every system himself.' },
+  // The drawn checklist, until a real photo of the review QR card exists (npm run shots writes real-photos.js).
+  seo: REAL_PHOTOS.includes('qr-card')
+    ? { kind: 'image', src: 'images/real/qr-card-480.webp', full: 'images/real/qr-card-1600.webp', fallback: 'images/real/qr-card.jpg', ratio: '4 / 3', caption: 'A review QR card · Photo', alt: 'A review QR card on a clinic counter.' }
+    : { kind: 'html', template: '#tpl-seo', ratio: '4 / 3', caption: 'What I fix · Illustration', alt: 'What I fix on your Google listing: categories, hours, real photos, services, a review QR card and weekly posts.' },
+  websites: { kind: 'video', video: 'media/demo-scroll', src: 'media/demo-scroll-poster.webp', still: 'images/work/demo-treatments-960.webp', ratio: '4 / 3', caption: 'Example: a clinic site · Demo', alt: 'Screen recording of the Smile Dental demo site scrolling through a treatment page and the visit planner.' },
+  riya: { kind: 'image', src: 'images/work/riya-chat-reply-480.webp', full: 'images/work/riya-chat-reply-960.webp', fallback: 'images/work/riya-chat-reply.jpg', ratio: '570 / 690', caption: 'Riya replying in Hinglish · Demo', alt: "Riya's chat window on the demo site. A patient asks in Hinglish for a Saturday morning checkup slot; Riya says yes and asks for their name." },
+  automations: { kind: 'html', template: '#tpl-flow', ratio: '4 / 3', caption: 'How one enquiry moves · Demo · names changed', alt: 'How one enquiry moves: new enquiry, added to your list, email to you, in your diary.' },
 };
 
 export function initPreviews({ gsap, lenis = null }) {

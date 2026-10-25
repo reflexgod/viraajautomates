@@ -76,7 +76,7 @@ for (const w of widths) {
     ['03-services', '#services', 0.06],
     ['04-rows-1', '[data-row]:nth-child(1)', 0.3],
     ['05-rows-3', '[data-row]:nth-child(3)', 0.3],
-    ['06-no-risk', '#no-risk', 0.3],
+    ['06-terms', '#terms', 0.3],
   ]) { await at(page, sel, frac); await shot(page, `${w}-${name}`); }
 
   // The About photo card (hover on desktop, tap on phones)

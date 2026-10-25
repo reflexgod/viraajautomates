@@ -8,7 +8,7 @@ await page.goto('http://localhost:4173/', { waitUntil: 'load' });
 // The nav bar, the strip and the grain are page furniture, not part of the picture.
 await page.addStyleTag({ content: '.nav, .hero__strip, .grain, .skip-link, .hero__actions, .hero__micro, .wa-bubble { display: none !important; } .hero__copy .hero__sub { max-width: none; margin: 0; }' });
 // The social line (the brief): one promise per beat.
-await page.evaluate(() => { document.querySelector('.hero__sub').innerHTML = '<span class="line-mask"><span>Get found. Get trusted.</span></span><span class="line-mask"><span>Never miss an enquiry.</span></span>'; });
+await page.evaluate(() => { document.querySelector('.hero__sub').innerHTML = '<span class="line-mask"><span>Get found. Get trusted.</span></span><span class="line-mask"><span>Answer enquiries after hours.</span></span>'; });
 await page.evaluate(() => document.fonts.ready);
 await page.waitForTimeout(500);
 await page.screenshot({ path: 'public/og-image.png' });

@@ -1,5 +1,5 @@
 // Records the selling interactions as frames and GIFs (docs/screenshots/<folder>/):
-// C1 the WhatsApp preview (desktop hover, phone two taps), C2 the report card filling in.
+// C1 the WhatsApp preview (desktop hover, phone two taps).
 // Also asserts the behaviour. node scripts/record-c.mjs [folder]   (needs npm run serve, ffmpeg on PATH)
 import { mkdirSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
@@ -26,7 +26,7 @@ async function frames(page, name, steps, clip) {
   rmSync(dir, { recursive: true, force: true });
 }
 
-// Desktop: hover the free-check button in the free check; type a name.
+// Desktop: hover the hero button, then the free check's button.
 {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(() => sessionStorage.setItem('va-intro', '1'));
@@ -41,24 +41,21 @@ async function frames(page, name, steps, clip) {
   ok('C1 desktop: hover shows the bubble above the hero button', await page.$eval('.hero .wa-anchor', (w) => w.classList.contains('is-open') && w.querySelector('.wa-bubble').getBoundingClientRect().bottom <= w.querySelector('.btn').getBoundingClientRect().top));
   await page.screenshot({ path: `${out}/1440-c1-hero-hover.png`, clip: { x: 60, y: 120, width: 760, height: 560 } });
   await page.mouse.move(5, 5);
-  // Free check: scroll there, type, hover unlock
+  // Free check: scroll there, hover its one button
   await page.evaluate(() => document.querySelector('#check').scrollIntoView());
   await page.waitForTimeout(900);
-  await page.evaluate(() => scrollBy(0, 260));
-  await page.waitForTimeout(700);
-  const clip = await page.$eval('.check__unlock', (e) => { const r = e.getBoundingClientRect(); return { x: Math.max(0, r.x - 40), y: Math.max(0, r.y - 260), width: r.width + 420, height: Math.min(900 - Math.max(0, r.y - 260), r.height + 300) }; });
-  const name = 'Smile Dental, Andheri';
-  await frames(page, 'c1-c2-desktop', [
-    async () => { await page.click('[data-business]'); },
-    ...(name.match(/.{1,2}/g)).map((pair) => async () => { await page.keyboard.type(pair, { delay: 40 }); }),
+  const btn = page.locator('#check .btn');
+  const clip = await btn.evaluate((e) => { const r = e.closest('.content').getBoundingClientRect(); return { x: Math.max(0, r.x - 40), y: Math.max(0, r.y - 40), width: Math.min(1440 - Math.max(0, r.x - 40), r.width + 80), height: Math.min(900 - Math.max(0, r.y - 40), r.height + 120) }; });
+  await frames(page, 'c1-desktop', [
+    async () => { await page.mouse.move(5, 5); },
+    async () => { await btn.hover(); },
     async () => { await page.waitForTimeout(400); },
   ], clip);
-  const st = await page.evaluate(() => ({ title: document.querySelector('[data-business-out]').textContent, href: document.querySelector('[data-wa-unlock]').href, bubble: document.querySelector('[data-wa-unlock]').closest('.wa-anchor').querySelector('.wa-bubble__text').textContent, hero: document.querySelector('.hero .btn').href }));
-  ok('C2: the card title fills in live', st.title === name, st.title);
-  ok('C2: unlock opens WhatsApp with "please send my free check" and the name', decodeURIComponent(new URL(st.href).search) === `?text=Hi Viraaj, please send my free check. Business name: ${name}`, decodeURIComponent(new URL(st.href).search));
-  ok('C1: the bubble shows the exact message', st.bubble === `Hi Viraaj, please send my free check. Business name: ${name}`, st.bubble);
-  ok('C1: other free-check buttons carry the name too', decodeURIComponent(st.hero).endsWith(name));
-  await page.screenshot({ path: `${out}/1440-c2-filled.png`, clip });
+  const st = await page.evaluate(() => { const a = document.querySelector('#check .btn'); return { label: a.firstChild.textContent, href: a.href, bubble: a.closest('.wa-anchor').querySelector('.wa-bubble__text').textContent, open: a.closest('.wa-anchor').classList.contains('is-open') }; });
+  ok('Free check: one button, "Send me your business name"', st.label === 'Send me your business name', st.label);
+  ok('Free check: it opens WhatsApp with the free-check text', decodeURIComponent(new URL(st.href).search) === "?text=Hi Viraaj, I'd like the free check. Business name: ", decodeURIComponent(new URL(st.href).search));
+  ok('C1: hover shows the exact message', st.open && st.bubble === "Hi Viraaj, I'd like the free check. Business name: …", st.bubble);
+  await page.screenshot({ path: `${out}/1440-c1-check.png`, clip });
   await ctx.close();
 }
 

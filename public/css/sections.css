@@ -86,13 +86,6 @@
 .proof:hover { background-image: linear-gradient(var(--ink), var(--ink)); }
 .proof--small { font-size: var(--fs-small); font-weight: 400; color: var(--ink-75); }
 .row__micro { margin-top: -6px; font-size: 13px; color: var(--ink-62); }
-/* The title is a link: pointer, and an underline that grows on hover */
-.row__link {
-  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
-  padding-bottom: 2px;
-  transition: background-size var(--dur-ui) var(--ease);
-}
-.row__link:hover, .row__link:focus-visible { background-size: 100% 1px; }
 .row__list { display: grid; gap: 5px; padding: 4px 0 6px; font-size: var(--fs-small); line-height: 1.55; color: var(--ink-75); }
 .row__list li { position: relative; padding-left: 18px; }
 .row__list li::before {
@@ -488,28 +481,7 @@
 .check__action { margin-top: var(--s32); }
 .check__micro { margin-top: 14px; max-width: 34rem; font-size: 13px; color: var(--ink-62); }
 
-/* ---------- C2: "Your free report", locked until it is sent on WhatsApp ---------- */
-.check__unlock { margin-top: var(--s40); max-width: 34rem; }
-.check__field { display: none; }
-.check__unlock.is-live .check__field { display: grid; gap: 6px; margin-bottom: var(--s24); }
-.check__field-label { font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-62); }
-.check__field input {
-  width: 100%;
-  min-height: 48px;
-  padding: 10px 0;
-  border: 0;
-  border-bottom: 1px solid var(--ink-30);
-  border-radius: 0;
-  background: transparent;
-  font: 400 var(--fs-lead)/1.3 var(--font-sans);
-  letter-spacing: -.012em;
-  color: var(--ink);
-  transition: border-color var(--dur-micro) var(--ease);
-}
-.check__field input::placeholder { color: var(--ink-55); }
-.check__field input:focus { outline: none; border-bottom-color: var(--ink); }
-.check__field input:focus-visible { outline: 2px solid var(--ink-30); outline-offset: 6px; }
-/* Desktop: the message sits beside the unlock button, so the card stays readable */
+/* Desktop: the message sits beside the free-check button, so the steps stay readable */
 @media (min-width: 1024px) {
   .check__action .wa-bubble { left: calc(100% + 16px); bottom: -6px; transform: translateX(-8px); }
   .check__action .wa-anchor.is-open .wa-bubble { transform: none; }
@@ -523,37 +495,10 @@
   .js .pen:not(.is-drawn) .pen__line path { stroke-dashoffset: 1; }
   .js .pen.is-drawn .pen__line path { transition: stroke-dashoffset .9s var(--ease); }
 }
-/* A printed card: cream mat, hairline frame, warm shadow */
-.report {
-  margin: 0;
-  padding: 8px;
-  background: var(--cream);
-  border-radius: var(--r-card);
-  box-shadow: 0 0 0 1px var(--ink-09), var(--shadow-card);
-}
-.report__head { display: grid; gap: 4px; padding: 14px 14px 12px; background: #fff; border-radius: var(--r-img) var(--r-img) 0 0; border-bottom: var(--hairline); }
-.report__kicker { font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-62); }
-.report__title { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
-.report__title [data-business-out] { color: var(--ink-62); transition: color var(--dur-ui) var(--ease); }
-.has-name .report__title [data-business-out] { color: var(--ink); }
-.report__rows { background: #fff; border-radius: 0 0 var(--r-img) var(--r-img); }
-.report__row { padding: 12px 14px 14px; border-top: var(--hairline); }
-.report__row:first-child { border-top: 0; }
-.report__q { display: flex; align-items: center; gap: 10px; font-size: var(--fs-small); line-height: 1.4; color: var(--ink); }
-.report__lock { flex: none; color: var(--ground); transform-origin: 50% 90%; }
-.report__shackle { transform-origin: 30% 100%; transition: transform .4s var(--ease); }
-/* Stand-in shapes under a 6 px blur: never real data */
-.report__blur { display: grid; gap: 6px; margin: 8px 0 0 24px; filter: blur(6px); }
-.report__blur i { display: block; width: var(--w); height: 8px; border-radius: 4px; background: var(--ink-30); }
-@media (prefers-reduced-motion: no-preference) {
-  .is-tilting .report__lock { animation: lock-lean .4s var(--ease); }
-  .is-tilting .report__shackle { transform: translateY(-1.2px) rotate(-14deg); }
-}
-@keyframes lock-lean { 40% { transform: rotate(-9deg); } 70% { transform: rotate(4deg); } }
 
-/* ---------- No risk ---------- */
-.norisk { padding-top: var(--s64); }
-@media (min-width: 768px) { .norisk { padding-top: var(--s96); } }
+/* ---------- Plain terms ---------- */
+.terms { padding-top: var(--s64); }
+@media (min-width: 768px) { .terms { padding-top: var(--s96); } }
 
 /* ==========================================================================
    Footer: the plug hangs in, one big line, the email
