@@ -9,6 +9,7 @@ import { initPreviews } from './preview.js';
 import { initHow } from './how.js';
 import { initTiles } from './tiles.js';
 import { initMessages } from './message.js';
+import { initCompose } from './compose.js';
 import { initProcess } from './process.js';
 import { initCursor } from './cursor.js';
 import { whenSeen } from './scroll.js';
@@ -33,6 +34,7 @@ initNav({ gsap, lenis, goTo });
 initPreviews({ gsap, lenis });
 initTiles();
 initMessages();
+initCompose();
 
 if (!motion) {
   root.classList.add('reveal-done');

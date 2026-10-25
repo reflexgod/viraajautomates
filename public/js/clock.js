@@ -40,8 +40,10 @@ export function initClock() {
   const statuses = document.querySelectorAll('[data-status]');
   const clocks = document.querySelectorAll('[data-clock]');
   const lives = document.querySelectorAll('[data-live-text]');
-  const wa = `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent('Hi Viraaj, I found your website and have a question.')}`;
-  const link = (label) => `<a href="${wa}" target="_blank" rel="noopener" title="Opens WhatsApp" data-cursor="Chat">${label}<span class="sr-only"> (opens WhatsApp)</span></a>`;
+  // Each line keeps the WhatsApp text of its own link in the HTML (its source tag says where it is).
+  const fallback = `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent('Hi Viraaj, I found your website and have a question.')}`;
+  const links = new Map([...lives].map((el) => [el, el.querySelector('a[href*="wa.me"]')?.href || fallback]));
+  const link = (el, label) => `<a href="${links.get(el)}" target="_blank" rel="noopener" title="Opens WhatsApp" data-cursor="Chat">${label}<span class="sr-only"> (opens WhatsApp)</span></a>`;
   let lastLive = '';
   const update = () => {
     const s = lineStatus();
@@ -54,10 +56,11 @@ export function initClock() {
     // Rebuilt only when the sentence changes, so a focused link keeps focus; the time ticks in place.
     const shape = s.open ? 'open' : s.reply;
     if (shape !== lastLive) {
-      const html = s.open
-        ? `Lines open · replies today · ${link('Message me')}`
-        : `It's <span data-live-time></span> in ${SITE.city}. I'll reply ${s.reply}. ${link('Message me')}`;
-      lives.forEach((el) => { el.innerHTML = html; });
+      lives.forEach((el) => {
+        el.innerHTML = s.open
+          ? `Lines open · replies today · ${link(el, 'Message me')}`
+          : `It's <span data-live-time></span> in ${SITE.city}. I'll reply ${s.reply}. ${link(el, 'Message me')}`;
+      });
       lastLive = shape;
     }
     lives.forEach((el) => { const t = el.querySelector('[data-live-time]'); if (t) t.textContent = s.time; });

@@ -26,21 +26,13 @@ async function frames(page, name, steps, clip) {
   rmSync(dir, { recursive: true, force: true });
 }
 
-// Desktop: hover the hero button, then the free check's button.
+// Desktop: hover the free check's button. (The hero has its own composer, js/compose.js.)
 {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(() => sessionStorage.setItem('va-intro', '1'));
   const page = await ctx.newPage();
   await page.goto('http://localhost:4173/', { waitUntil: 'load' });
   await page.waitForTimeout(1000);
-  // Hero hover
-  const hb = await page.$eval('.hero .btn', (e) => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
-  await page.mouse.move(hb[0], hb[1] + 120);
-  await page.mouse.move(hb[0], hb[1], { steps: 4 });
-  await page.waitForTimeout(600);
-  ok('C1 desktop: hover shows the bubble above the hero button', await page.$eval('.hero .wa-anchor', (w) => w.classList.contains('is-open') && w.querySelector('.wa-bubble').getBoundingClientRect().bottom <= w.querySelector('.btn').getBoundingClientRect().top));
-  await page.screenshot({ path: `${out}/1440-c1-hero-hover.png`, clip: { x: 60, y: 120, width: 760, height: 560 } });
-  await page.mouse.move(5, 5);
   // Free check: scroll there, hover its one button
   await page.evaluate(() => document.querySelector('#check').scrollIntoView());
   await page.waitForTimeout(900);
@@ -53,8 +45,8 @@ async function frames(page, name, steps, clip) {
   ], clip);
   const st = await page.evaluate(() => { const a = document.querySelector('#check .btn'); return { label: a.firstChild.textContent, href: a.href, bubble: a.closest('.wa-anchor').querySelector('.wa-bubble__text').textContent, open: a.closest('.wa-anchor').classList.contains('is-open') }; });
   ok('Free check: one button, "Send me your business name"', st.label === 'Send me your business name', st.label);
-  ok('Free check: it opens WhatsApp with the free-check text', decodeURIComponent(new URL(st.href).search) === "?text=Hi Viraaj, I'd like the free check. Business name: ", decodeURIComponent(new URL(st.href).search));
-  ok('C1: hover shows the exact message', st.open && st.bubble === "Hi Viraaj, I'd like the free check. Business name: …", st.bubble);
+  ok('Free check: it opens WhatsApp with the free-check text', decodeURIComponent(new URL(st.href).search) === "?text=Hi Viraaj, I'd like the free check (free check). Business name: ", decodeURIComponent(new URL(st.href).search));
+  ok('C1: hover shows the exact message', st.open && st.bubble === "Hi Viraaj, I'd like the free check (free check). Business name: …", st.bubble);
   await page.screenshot({ path: `${out}/1440-c1-check.png`, clip });
   await ctx.close();
 }
@@ -67,7 +59,9 @@ async function frames(page, name, steps, clip) {
   const page = await ctx.newPage();
   await page.goto('http://localhost:4173/', { waitUntil: 'load' });
   await page.waitForTimeout(1000);
-  const b = await page.$eval('.hero .btn', (e) => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+  await page.evaluate(() => document.querySelector('#check .btn').scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(600);
+  const b = await page.$eval('#check .btn', (e) => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
   let popups = 0;
   ctx.on('page', () => { popups++; });
   await frames(page, 'c1-phone', [
@@ -75,7 +69,7 @@ async function frames(page, name, steps, clip) {
     async () => { await page.touchscreen.tap(b[0], b[1]); await page.waitForTimeout(500); },
     async () => { await page.waitForTimeout(400); },
   ], { x: 0, y: 380, width: 375, height: 432 });
-  ok('C1 phone: first tap shows the bubble, no WhatsApp yet', popups === 0 && await page.$eval('.hero .wa-anchor', (w) => w.classList.contains('is-open')));
+  ok('C1 phone: first tap shows the bubble, no WhatsApp yet', popups === 0 && await page.$eval('#check .wa-anchor', (w) => w.classList.contains('is-open')));
   await page.screenshot({ path: `${out}/375-c1-first-tap.png` });
   await page.touchscreen.tap(b[0], b[1]);
   await page.waitForTimeout(800);
@@ -83,6 +77,8 @@ async function frames(page, name, steps, clip) {
   // A reload in the same session: one tap.
   await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(900);
+  await page.evaluate(() => document.querySelector('#check .btn').scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(600);
   await page.touchscreen.tap(b[0], b[1]);
   await page.waitForTimeout(800);
   ok('C1 phone: seen this session, one tap opens WhatsApp', popups === 2, `${popups} new tab(s)`);

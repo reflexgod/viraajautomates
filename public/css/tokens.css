@@ -29,9 +29,11 @@
 
   /* Cream on ground */
   --cream-15: rgb(var(--cream-rgb) / .15);
+  --cream-30: rgb(var(--cream-rgb) / .30);   /* the composer's writing line */
   --cream-36: rgb(var(--cream-rgb) / .36);
   --cream-40: rgb(var(--cream-rgb) / .40);
   --cream-55: rgb(var(--cream-rgb) / .55);
+  --cream-62: rgb(var(--cream-rgb) / .62);   /* live message preview */
   --cream-72: rgb(var(--cream-rgb) / .72);
 
   --hairline: 1px solid var(--ink-15);

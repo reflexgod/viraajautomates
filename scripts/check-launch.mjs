@@ -49,7 +49,9 @@ const speed = /in seconds|within seconds|instant|within the hour|in minutes|ligh
 const speedHits = siteText.filter(([f]) => /\.html$|clock\.js$|message\.js$/.test(f)).filter(([, t]) => speed.test(t.replace(/<script[\s\S]*?<\/script>/g, ''))).map(([f, t]) => `${f}: ${t.match(speed)[0]}`);
 report('No speed claims ("in seconds" and the like)', speedHits.length === 0, speedHits.join(' | '));
 report('No "Sample" names left (fictional names, captions say "names changed")', !siteText.some(([f, t]) => f.endsWith('.html') && /[A-Z][a-z]+ Sample/.test(t)));
-report('No "small business" anywhere a visitor can read', !siteText.some(([, t]) => /small business/i.test(t)));
+// The one exception is the owner's own hero line (round 4, 26 Oct 2026), in the hero and the meta description.
+const ownerLine = "for clinics and small businesses in Mumbai and Pune.";
+report('No "small business" anywhere a visitor can read (except the owner’s hero line)', !siteText.some(([, t]) => /small business/i.test(t.split(ownerLine).join(''))));
 const copy = html.map((f) => readFileSync(f, 'utf8')).join('\n');
 report('No "reminders" claim anywhere', !/remind/i.test(copy));
 report('No "Line 01" / "Line open" labels left', !/\(\s*Line\b|Line open|No line here/.test(copy));
@@ -65,9 +67,15 @@ const rowBad = rows.filter((r) => {
   return /<a\b/.test(title) || !/<button class="pw" type="button" data-preview="\w+"/.test(title) || (r.match(/href="https:\/\/wa\.me\//g) || []).length !== 1;
 }).map((r) => r.match(/class="pw__word">([^<]+)/)?.[1] || '?');
 report('Service titles open a preview, never WhatsApp; each row has exactly one WhatsApp link', rows.length === 4 && rowBad.length === 0, rowBad.join(' | '));
-report('Free check: no locked report card, no "Unlock", one "Send me your business name" button', !/data-report|report__|unlock/i.test(index) && (index.match(/>Send me your business name</g) || []).length === 1);
+report('Free check: no locked report card, no "Unlock", one "Send me your business name" button', !/data-report|report__|unlock/i.test(index) && (index.match(/>Send me your business name </g) || []).length === 1);
 report('FAQ "Is my customers\' data safe?" names the AI service and the automation server', index.includes('Requests are saved in your own Google Sheet and inbox. To reply, messages pass through the AI service and the automation server I run. Riya never gives a diagnosis or fees.'));
 report('Privacy notice names the AI service and the automation server as processors', /AI service and the automation server I run\. Both act as processors/.test(readFileSync('public/privacy.html', 'utf8')));
+// Round 4 (owner, 26 Oct 2026): the hero promise and composer, plain buttons, positive reassurance.
+report('Hero H1 is the promise, not the name', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Get found on Google\.<\/span><\/span>\s*<span class="line-mask"><span[^>]*>Answer website enquiries even after hours\.<\/span><\/span>\s*<\/h1>/.test(index));
+report('Hero composer: a real label, the placeholder, aria-live preview, the reassurance line', /<label class="compose__field"><span class="sr-only">Business name<\/span><input[^>]*placeholder="Your business name"/.test(index) && /aria-live="polite" data-compose-preview/.test(index) && index.includes('It comes straight to my WhatsApp. Only I read it.'));
+report('No "Get my free check" left; buttons have no boxed arrow', !/Get my free check|btn__box|btn--plug/.test(copy));
+report('"no lock-in" only in Plain terms', (copy.match(/lock-in/gi) || []).length === 1 && /id="terms"[\s\S]*?no lock-in[\s\S]*?<\/section>/.test(index));
+report('No negative reassurance words ("spam", "never share", "no hidden", "no charge")', !/\bspam\b|never share|no hidden|no charge|nothing is sold/i.test(copy));
 
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader'] });
 const fresh = async (opts = {}, seen = true) => {
@@ -133,9 +141,14 @@ const fresh = async (opts = {}, seen = true) => {
   }
   report('Every link works (internal pages, anchors, email)', broken.length === 0, broken.join(' | '));
   const waBad = wa.filter((h) => { const u = new URL(h); return u.pathname !== '/919653375679' || !u.searchParams.get('text'); });
-  const texts = new Set(wa.map((h) => new URL(h).searchParams.get('text')));
-  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
-  report('WhatsApp prefilled texts: free check, Google, website, question, live demo', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
+  // Every message ends with a source tag in brackets, "(hero)", "(footer)"; one that ends in a blank ("Business name: ") has it just before the blank.
+  const TAG = / \(([a-z0-9 ]+)\)(?=[.?]? ?(?:[^.?()]+: )?$)/;
+  const all = wa.map((h) => new URL(h).searchParams.get('text'));
+  const untagged = [...new Set(all.filter((t) => !TAG.test(t)))];
+  report('Every WhatsApp message carries a source tag at its end', untagged.length === 0, untagged.join(' | '));
+  const texts = new Set(all.map((t) => t.replace(TAG, '')));
+  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, I'd like the free check for my business.", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
+  report('WhatsApp prefilled texts: free check, hero composer, Google, website, question, live demo', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
   report(`Every WhatsApp link opens +91 96533 75679 with prefilled text (${wa.length} links)`, wa.length > 0 && waBad.length === 0, [...new Set(wa.map((h) => new URL(h).searchParams.get('text')))].map((t) => `"${t}"`).join(' / '));
   await ctx.close();
 }
@@ -266,6 +279,50 @@ await checkHow({ browser, base: BASE, report });
   await ctx.close();
 }
 
+// ---------- Hero composer: preview and link follow the field; button or Enter opens one WhatsApp tab ----------
+{
+  const results4 = [];
+  for (const w of [1440, 375]) {
+    const m = w < 768;
+    const ctx = await fresh({ viewport: { width: w, height: m ? 812 : 900 }, isMobile: m, hasTouch: m });
+    await ctx.route('https://wa.me/**', (r) => r.fulfill({ status: 200, body: 'whatsapp' }));
+    const page = await ctx.newPage();
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    await page.waitForTimeout(1500);
+    const empty = await page.textContent('[data-compose-preview]');
+    await page.fill('[data-compose-name]', 'Smile Dental, Andheri');
+    const st = await page.evaluate(() => { const b = document.querySelector('[data-compose-send]'); const cs = getComputedStyle(b); const r = b.getBoundingClientRect(); return { preview: document.querySelector('[data-compose-preview]').textContent, href: b.href, font: cs.fontFamily, weight: cs.fontWeight, upper: cs.textTransform, h: r.height, w: r.width, bottom: r.bottom, input: document.querySelector('[data-compose-name]').getBoundingClientRect().width }; });
+    const want = "Hi Viraaj, I'd like the free check for Smile Dental, Andheri. (hero)";
+    const popup = ctx.waitForEvent('page', { timeout: 3000 }).catch(() => null);
+    await page.press('[data-compose-name]', 'Enter');
+    const tab = await popup;
+    const opened = tab ? decodeURIComponent(new URL(tab.url()).searchParams.get('text') || '') : '';
+    results4.push([w, empty === "Hi Viraaj, I'd like the free check for my business. (hero)" && st.preview === want && decodeURIComponent(new URL(st.href).searchParams.get('text')) === want && opened === want, `${w}: empty "${empty}", typed "${st.preview}", Enter opened "${opened}"`]);
+    results4.push([w, /Inter/.test(st.font) && st.weight === '500' && st.upper === 'none' && st.h >= 48 && (!m || Math.abs(st.w - st.input) < 2), `${w}: button ${st.font.split(',')[0]} ${st.weight} ${st.upper}, ${Math.round(st.h)} px tall, ${Math.round(st.w)} px wide (input ${Math.round(st.input)})`]);
+    if (m) results4.push([w, st.bottom <= 812, `375: button bottom at ${Math.round(st.bottom)} px of 812`]);
+    await ctx.close();
+  }
+  report('Hero composer: preview and link follow the name; Enter opens WhatsApp with exactly the preview', results4.filter((_, i) => [0, 2].includes(i)).every((r) => r[1]), results4.filter((_, i) => [0, 2].includes(i)).map((r) => r[2]).join(' | '));
+  report('Hero button: Inter 500, sentence case, at least 48 px; full width under the field on phones, above the fold', results4.filter((_, i) => [1, 3, 4].includes(i)).every((r) => r[1]), results4.filter((_, i) => [1, 3, 4].includes(i)).map((r) => r[2]).join(' | '));
+  // Without JavaScript: no field, and the button is the plain free-check link.
+  const nj = await fresh({ javaScriptEnabled: false });
+  const np = await nj.newPage();
+  await np.goto(BASE + '/', { waitUntil: 'load' });
+  const nojs = await np.evaluate(() => ({ field: getComputedStyle(document.querySelector('.compose__field')).display, text: new URL(document.querySelector('[data-compose-send]').href).searchParams.get('text') }));
+  report('Hero without JavaScript: the field is hidden, the button is the plain free-check link', nojs.field === 'none' && nojs.text === "Hi Viraaj, I'd like the free check (hero). Business name: ", `${nojs.field}, "${nojs.text}"`);
+  await nj.close();
+  // Every primary button on every page: Inter, sentence case.
+  const bc = await fresh();
+  const bp = await bc.newPage();
+  const mono = [];
+  for (const path of ['/', '/work/smile-dental/', '/404.html']) {
+    await bp.goto(BASE + path, { waitUntil: 'load' });
+    mono.push(...(await bp.evaluate(() => [...document.querySelectorAll('.btn')].filter((b) => { const cs = getComputedStyle(b); return !/Inter/.test(cs.fontFamily) || cs.textTransform !== 'none' || cs.fontWeight !== '500'; }).map((b) => b.textContent.trim()))).map((t) => `${path}: ${t}`));
+  }
+  report('Every primary button is Inter 500, sentence case', mono.length === 0, mono.join(' | '));
+  await bc.close();
+}
+
 // ---------- Keyboard ----------
 {
   const ctx = await fresh();
@@ -279,7 +336,9 @@ await checkHow({ browser, base: BASE, report });
     const f = await page.evaluate(() => {
       const a = document.activeElement; if (!a || a === document.body) return null;
       const cs = getComputedStyle(a); const w = a.querySelector('.pw__word, .tile__shot'); const ws = w ? getComputedStyle(w) : null;
-      const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2) || (ws && ws.outlineStyle !== 'none' && parseFloat(ws.outlineWidth) >= 2);
+      const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2) || (ws && ws.outlineStyle !== 'none' && parseFloat(ws.outlineWidth) >= 2)
+        // The composer's writing line: full cream and 2 px thick on focus
+        || (a.tagName === 'INPUT' && cs.boxShadow !== 'none' && parseFloat(cs.borderBottomWidth) >= 1);
       return { label: (a.getAttribute('aria-label') || a.textContent || a.className).trim().replace(/\s+/g, ' ').slice(0, 40), ring, tag: a.tagName };
     });
     if (!f) continue;
@@ -287,7 +346,7 @@ await checkHow({ browser, base: BASE, report });
     if (!f.ring) noRing.push(f.label);
   }
   report('Keyboard: every focused element shows a 2 px outline', noRing.length === 0, noRing.slice(0, 6).join(' | '));
-  report('Keyboard: Tab reaches the service titles, buttons and footer links', ['Local SEO', 'Websites', 'Riya, AI receptionist', 'Automations', 'Find out where you stand on Google', 'Ask me for a live demo', 'Read the full case study', 'Get my free check'].every((t) => seen.some((s) => s.includes(t))), `${seen.length} stops`);
+  report('Keyboard: Tab reaches the service titles, buttons and footer links', ['Local SEO', 'Websites', 'Riya, AI receptionist', 'Automations', 'Find out where you stand on Google', 'Ask me for a live demo', 'Read the full case study', 'Check my business'].every((t) => seen.some((s) => s.includes(t))), `${seen.length} stops`);
   // Menu: focus trap, Escape, focus return
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.focus('[data-menu-btn]');
