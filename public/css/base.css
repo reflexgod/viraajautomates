@@ -1,0 +1,209 @@
+/* ==========================================================================
+   Base: fonts, reset, page grid, type styles, grain, reveal states.
+   ========================================================================== */
+
+/* ---------- Fonts (self-hosted, Latin subset, SIL Open Font License) ---------- */
+@font-face {
+  font-family: "Faculty Glyphic";
+  src: url("../fonts/faculty-glyphic-latin-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-latin-wght.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Mono";
+  src: url("../fonts/dm-mono-latin-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DM Mono";
+  src: url("../fonts/dm-mono-latin-500.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 112px;
+  scrollbar-width: none;
+  /* Nothing may nudge the page sideways on phones (pinned sections are position: fixed while pinned). */
+  overflow-x: clip;
+}
+html::-webkit-scrollbar { display: none; }
+body {
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink-75);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01";
+  overflow-x: clip;
+}
+img, picture, svg, canvas, video { display: block; max-width: 100%; }
+img { height: auto; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
+ol, ul { list-style: none; padding: 0; }
+h1, h2, h3 { font-weight: inherit; font-size: inherit; text-wrap: balance; }
+p { text-wrap: pretty; }
+::selection { background: var(--ink); color: var(--paper); }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 1px; }
+
+/* Lenis smooth scrolling */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ---------- Helpers ---------- */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: fixed;
+  top: var(--s16); left: var(--s16);
+  z-index: calc(var(--z-nav) + 1);
+  padding: var(--s12) var(--s16);
+  background: var(--graphite);
+  color: var(--cream);
+  font: 400 var(--fs-button)/1 var(--font-mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  border-radius: var(--r-btn);
+  transform: translateY(-200%);
+}
+.skip-link:focus-visible { transform: none; }
+
+/* ---------- Page grid: a fixed label rail, content in columns 4-12 ---------- */
+.section {
+  position: relative;
+  padding: var(--section-y) var(--edge);
+}
+.rail-grid > .rail { margin-bottom: var(--s24); }
+.rail-grid > .content { max-width: var(--measure-content); }
+@media (min-width: 1024px) {
+  .rail-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  .rail-grid > .rail { grid-column: 1 / 4; margin: 0; padding-top: .55em; }
+  .rail-grid > .content { grid-column: 4 / 13; }
+}
+
+/* ---------- Type styles ---------- */
+/* Section labels: parenthesised mono in the rail. Uppercase lives only here and in tags. */
+.t-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-62);
+  word-spacing: -.12em;
+}
+.t-tag {
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+/* Statements: one large light paragraph per section, never a heading */
+.t-statement {
+  font-size: var(--fs-statement);
+  font-weight: 300;
+  line-height: 1.625;
+  letter-spacing: -.025em;
+  color: var(--ink);
+}
+.t-lead {
+  font-size: var(--fs-lead);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -.012em;
+  color: var(--ink-65);
+}
+.t-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -.015em;
+  line-height: 1.05;
+}
+
+/* Masked lines: the wrapper clips, the inner span rises */
+.line-mask { display: block; overflow: hidden; padding-bottom: .12em; margin-bottom: -.12em; }
+.line-mask > span { display: block; }
+
+/* ---------- Film grain: fixed over everything, jittered in four steps ---------- */
+.grain {
+  position: fixed;
+  inset: -180px;
+  z-index: var(--z-grain);
+  pointer-events: none;
+  opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  animation: grain .8s steps(4) infinite;
+}
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-63px, 41px); }
+  50% { transform: translate(52px, -97px); }
+  75% { transform: translate(-121px, -18px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ---------- Reveal "before" states: only with JS and motion allowed ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .js:not(.reveal-done) [data-reveal="fade"],
+  .js:not(.reveal-done) [data-footer-fade] { opacity: 0; }
+  .js:not(.reveal-done) [data-reveal="lines"] .line-mask > span,
+  .js:not(.reveal-done) [data-footer-lines] .line-mask > span { transform: translateY(110%); }
+
+  /* The hero entrance runs in CSS, so the copy never waits for scripts (brief 9.2:
+     lines 1.2 s expo.out, stagger 0.1; label, button, strip 0.9 s power3.out, stagger 0.08) */
+  [data-hero-lines] .line-mask > span {
+    animation: hero-rise 1.2s cubic-bezier(.16, 1, .3, 1) backwards;
+    animation-delay: calc(.15s + var(--i, 0) * .1s);
+  }
+  [data-hero-fade] {
+    animation: hero-fade .9s cubic-bezier(.215, .61, .355, 1) backwards;
+    animation-delay: calc(.55s + var(--i, 0) * .08s);
+  }
+  /* No intro (seen this session, or reduced motion): the text comes in at once,
+     visible within about half a second of first paint. */
+  .hero-now [data-hero-lines] .line-mask > span { animation-duration: .9s; animation-delay: calc(var(--i, 0) * .07s); }
+  .hero-now [data-hero-fade] { animation-duration: .7s; animation-delay: calc(.08s + var(--i, 0) * .06s); }
+  /* With the intro, the entrance waits (delays included) until the panel splits. */
+  .intro-on:not(.intro-split) [data-hero-lines] .line-mask > span,
+  .intro-on:not(.intro-split) [data-hero-fade] { animation-play-state: paused; }
+}
+@keyframes hero-rise { from { transform: translateY(110%); } }
+@keyframes hero-fade { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .grain { animation: none; }
+  *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}

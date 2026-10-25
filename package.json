@@ -1,0 +1,31 @@
+{
+  "name": "viraajautomates",
+  "private": true,
+  "type": "module",
+  "description": "Dev tools for the Viraaj Automates static site. Nothing here is loaded by the live site.",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "photo": "node scripts/process-photo.mjs",
+    "logo": "node scripts/make-logo.mjs",
+    "fonts": "node scripts/copy-vendor.mjs",
+    "vendor": "node scripts/copy-vendor.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "og": "node scripts/make-og.mjs",
+    "shoot": "node scripts/shoot.mjs",
+    "still": "node scripts/make-cable-still.mjs",
+    "shots": "node scripts/process-shots.mjs"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/dm-mono": "^5.3.0",
+    "@fontsource/faculty-glyphic": "^5.3.0",
+    "@fontsource/roboto": "^5.3.0",
+    "esbuild": "^0.28.2",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.27",
+    "opentype.js": "^2.0.0",
+    "playwright-core": "^1.64.1",
+    "sharp": "^0.35.5",
+    "three": "^0.186.1"
+  }
+}

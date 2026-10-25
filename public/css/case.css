@@ -1,0 +1,203 @@
+/* ==========================================================================
+   Case study pages (/work/smile-dental/). Same grid, type and colours as the
+   home page; sections 120 px apart; images full width (16:9) or in pairs (4:3)
+   with 16 px gaps; every image has a mono caption ending in "Demo".
+   ========================================================================== */
+
+/* ---------- Section tabs: sticky under the nav bar ---------- */
+.tabs {
+  position: sticky;
+  top: calc(var(--nav-top) + 69px);
+  z-index: calc(var(--z-nav) - 2);
+  display: flex;
+  justify-content: center;
+  margin-top: calc(var(--nav-top) + 69px);
+  padding-inline: 16px;
+  pointer-events: none;
+}
+.tabs__list {
+  display: flex;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--paper);
+  border-radius: var(--r-btn);
+  box-shadow: 0 0 0 1px var(--ink-15);
+  pointer-events: auto;
+}
+.tabs__list::-webkit-scrollbar { display: none; }
+.tabs a {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-62);
+  transition: background-color var(--dur-micro) var(--ease), color var(--dur-micro) var(--ease);
+}
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="true"] { background: var(--ink); color: var(--paper); }
+.tabs a:focus-visible { outline-offset: -2px; }
+
+/* ---------- Hero ---------- */
+.case-hero { padding: var(--s48) var(--edge) 0; }
+.case-hero__top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 28px; margin-bottom: var(--s24); }
+.case-back { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink-75); transition: transform var(--dur-ui) var(--ease); }
+.case-back:hover { transform: translateX(-3px); color: var(--ink); }
+.case-hero__grid { display: grid; gap: var(--s40); }
+.case-title {
+  max-width: 15em;
+  font-size: clamp(2.125rem, 1.3rem + 3vw, 4rem);
+  line-height: 1.06;
+  letter-spacing: -.02em;
+  color: var(--ink);
+}
+.case-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 24px; align-content: start; }
+.case-meta div:last-child { grid-column: 1 / -1; }
+.case-meta dt { margin-bottom: 4px; font-family: var(--font-mono); font-size: var(--fs-tag); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-62); }
+.case-meta dd { margin: 0; font-size: var(--fs-small); line-height: 1.45; color: var(--ink); }
+@media (min-width: 1024px) {
+  .case-hero__grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); align-items: end; }
+  .case-title { grid-column: 1 / 9; }
+  .case-meta { grid-column: 9 / 13; padding-bottom: .6em; }
+}
+.case-fig--video { position: relative; margin-top: var(--s64); }
+.case-play {
+  position: absolute;
+  right: 12px; top: 12px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 2px;
+  background: var(--graphite);
+  color: var(--cream);
+}
+.case-play:focus-visible { outline-color: var(--ink); }
+
+/* ---------- Figures ---------- */
+.case-fig { margin: 0; }
+.case-media { position: relative; overflow: hidden; border-radius: var(--r-img); background: var(--ink-06); }
+.case-media picture { display: contents; }
+.case-media img, .case-media video { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+.case-media--wide { aspect-ratio: 16 / 9; }
+.case-media--4x3 { aspect-ratio: 4 / 3; }
+.case-media--4x3 img { object-position: 0 0; }
+.case-media--right img { object-position: 100% 0; }
+/* The treatments page at its own shape (cut above Riya's widget) */
+.case-media--page { aspect-ratio: 1920 / 880; }
+/* A tall screenshot on a paper mat, whole */
+.case-media--mat { background: var(--ink-06); padding: 20px; }
+.case-media--mat img { object-fit: contain; object-position: 50% 50%; }
+.case-cap { margin-top: 12px; font-family: var(--font-mono); font-size: var(--fs-tag); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-62); }
+.case-pair { display: grid; gap: var(--s16); }
+@media (min-width: 768px) { .case-pair { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- Sections ---------- */
+.case-sec { padding: 120px var(--edge) 0; scroll-margin-top: 120px; }
+.case-text { margin-bottom: var(--s64); }
+.case-sec:last-of-type .case-text { margin-bottom: 0; }
+.case-h {
+  margin-bottom: var(--s24);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.2rem + 1.8vw, 2.75rem);
+  line-height: 1.1;
+  letter-spacing: -.012em;
+  color: var(--ink);
+}
+.case-lead {
+  max-width: 38rem;
+  font-size: clamp(1.1875rem, 1rem + .7vw, 1.4375rem);
+  font-weight: 300;
+  line-height: 1.55;
+  letter-spacing: -.015em;
+  color: var(--ink);
+}
+.case-body { max-width: 36rem; }
+.case-body p { margin-top: var(--s24); font-size: var(--fs-body); line-height: 1.7; color: var(--ink-75); }
+.case-small { margin-top: var(--s24); font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-62); }
+
+/* What I set up: one plain sentence per part */
+.parts { margin-top: var(--s40); border-bottom: var(--hairline); }
+.parts div { display: grid; gap: 4px 32px; padding: 16px 0; border-top: var(--hairline); }
+.parts dt { font-size: var(--fs-body-l); font-weight: 500; letter-spacing: -.01em; color: var(--ink); }
+.parts dd { margin: 0; font-size: var(--fs-body); line-height: 1.6; color: var(--ink-75); }
+@media (min-width: 768px) { .parts div { grid-template-columns: 11rem minmax(0, 1fr); } .parts dd { padding-top: .1em; } }
+
+/* What the clinic gets */
+.gets { margin-top: var(--s16); border-bottom: var(--hairline); }
+.gets li {
+  padding: 18px 0;
+  border-top: var(--hairline);
+  font-size: clamp(1.0625rem, .98rem + .35vw, 1.25rem);
+  font-weight: 300;
+  line-height: 1.5;
+  letter-spacing: -.012em;
+  color: var(--ink);
+}
+
+/* ---------- One enquiry: the four steps, larger ---------- */
+.case-steps { display: grid; gap: var(--s96); }
+.case-step__head { position: relative; padding-left: 26px; margin-bottom: var(--s24); }
+.case-step__jack {
+  position: absolute;
+  left: 0; top: .35em;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--ink-62);
+}
+.case-step__jack::before { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--ground); }
+.case-step__num { font-family: var(--font-mono); font-size: var(--fs-tag); letter-spacing: .08em; color: var(--ink-62); }
+.case-step__name { margin: 2px 0 8px; font-family: var(--font-display); font-size: var(--fs-step); line-height: 1.1; letter-spacing: -.015em; color: var(--ink); }
+.case-step__text { max-width: 20rem; font-size: var(--fs-body-l); line-height: 1.5; color: var(--ink-75); }
+.case-step__visual { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin: 0; min-width: 0; }
+.case-step__visual .phone { width: min(100%, 22rem); height: 32rem; max-height: none; }
+.case-step__visual .tiles { width: 100%; }
+.case-step__visual .callcard { width: min(100%, 28rem); }
+.case-step__visual .case-cap { margin-top: 0; }
+@media (min-width: 1024px) {
+  .case-step { align-items: start; }
+  .case-step__head { grid-column: 1 / 5; position: sticky; top: 140px; margin: 0; }
+  .case-step__visual { grid-column: 5 / 13; }
+}
+@media (max-width: 767px) {
+  .case-step__visual .phone { height: 26rem; }
+}
+
+/* ---------- Next step: a dark band before the footer ---------- */
+.case-next {
+  margin-top: 120px;
+  padding: var(--s96) var(--edge);
+  background: var(--graphite);
+  color: var(--cream);
+}
+@media (min-width: 768px) { .case-next { padding-block: var(--s144); } }
+.case-next .t-label { color: var(--cream-72); }
+.case-next__title { font-size: clamp(2.5rem, 1.5rem + 4vw, 5.25rem); line-height: 1.02; letter-spacing: -.02em; color: var(--cream); }
+.case-next__actions { display: flex; flex-wrap: wrap; gap: 16px 20px; margin-top: var(--s48); }
+.case-next + .footer { margin-top: 0; }
+
+/* Reveal before-state: fade up 28 px, once (only with JS and motion) */
+@media (prefers-reduced-motion: no-preference) {
+  .js:not(.reveal-done) [data-case-reveal] { opacity: 0; transform: translateY(28px); }
+  .js:not(.reveal-done) figure[data-case-reveal] { opacity: .4; }
+}
+
+/* "Chat with Riya now" on the dark band: a cream text link */
+.case-next__actions { align-items: center; }
+.case-next__link {
+  display: inline-flex;
+  align-items: center;
+  gap: .3em;
+  min-height: 44px;
+  font-size: var(--fs-body-l);
+  color: var(--cream);
+  background: linear-gradient(var(--cream-36), var(--cream-36)) 0 calc(100% - 10px) / 100% 1px no-repeat;
+}
+.case-next__link:hover { background-image: linear-gradient(var(--cream), var(--cream)); }
+.case-next__link:focus-visible { outline-color: var(--cream); }

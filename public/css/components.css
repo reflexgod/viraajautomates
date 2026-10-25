@@ -1,0 +1,1003 @@
+/* ==========================================================================
+   Shared components: button, nav bar, menu, hero, preview words and card,
+   the drawn demo visuals (phone, tiles, call card), cursor, lightbox,
+   message bubble. Colours come from tokens.css only.
+   ========================================================================== */
+
+/* ---------- Primary button: mono, black fill, arrow in an outlined square ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 12px 13px 12px 18px;
+  border-radius: var(--r-btn);
+  background: var(--graphite);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: var(--fs-button);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: transform var(--dur-ui) var(--ease), background-color var(--dur-micro) var(--ease);
+}
+.btn__box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px; height: 24px;
+  overflow: hidden;
+  border: 1px solid var(--cream-36);
+  border-radius: 2px;
+  font-size: 11px;
+  letter-spacing: 0;
+  transition: background-color var(--dur-micro) var(--ease), color var(--dur-micro) var(--ease), border-color var(--dur-micro) var(--ease), transform .15s var(--ease);
+}
+.btn__arrow { transition: transform .25s var(--ease), opacity .2s var(--ease); }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0); }
+
+/* Plug-in buttons: on hover or focus the arrow leaves and a tiny plug slides
+   into the box, 3 px short of its socket; pressing seats it with a small click.
+   Every button here connects you to me, so the box is a socket. */
+.plug {
+  position: absolute;
+  left: 2px; top: 50%;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transform: translate(-12px, -50%);
+  transition: transform .28s var(--ease), opacity .18s var(--ease);
+}
+.plug__body { width: 8px; height: 6px; border-radius: 1px; background: currentColor; }
+.plug__pin { width: 5px; height: 1.5px; background: currentColor; }
+.btn--plug .btn__box::after {
+  content: "";
+  position: absolute;
+  right: 4px; top: 50%;
+  width: 2px; height: 8px;
+  margin-top: -4px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity .2s var(--ease);
+}
+.btn--plug:focus-visible .btn__box,
+.btn--plug:active .btn__box { background: var(--cream); color: var(--graphite); border-color: var(--cream); }
+.btn--plug:focus-visible .btn__arrow,
+.btn--plug:active .btn__arrow { transform: translateX(12px); opacity: 0; }
+.btn--plug:focus-visible .plug { opacity: 1; transform: translate(3px, -50%); }
+.btn--plug:focus-visible .btn__box::after,
+.btn--plug:active .btn__box::after { opacity: 1; }
+.btn--plug:active .plug { opacity: 1; transform: translate(6px, -50%); transition-duration: .12s; }
+.btn--plug:active .btn__box { transform: scale(.92); }
+@media (hover: hover) {
+  .btn:hover .btn__box { background: var(--cream); color: var(--graphite); border-color: var(--cream); }
+  .btn--plug:hover .btn__arrow { transform: translateX(12px); opacity: 0; }
+  .btn--plug:hover .plug { opacity: 1; transform: translate(3px, -50%); }
+  .btn--plug:hover .btn__box::after { opacity: 1; }
+  .btn--plug:hover:active .plug { transform: translate(6px, -50%); }
+}
+.btn:focus-visible { outline-color: var(--graphite); }
+[data-dark] .btn:focus-visible, .hero .btn:focus-visible { outline-color: var(--cream); }
+
+/* Light button: cream fill, dark text, for dark grounds (hero, dark bands, footer) */
+.btn--light { background: var(--cream); color: var(--ink); }
+.btn--light .btn__box { border-color: var(--ink-30); }
+.btn--light:focus-visible { outline-color: var(--cream); }
+.btn--light.btn--quiet { background: transparent; color: var(--cream); box-shadow: inset 0 0 0 1px var(--cream-36); }
+.btn--light.btn--quiet .btn__box { border-color: var(--cream-36); }
+@media (hover: hover) {
+  .btn--light:hover .btn__box { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+  .btn--light.btn--quiet:hover .btn__box { background: var(--cream); color: var(--ink); border-color: var(--cream); }
+}
+.btn--light.btn--plug:focus-visible .btn__box, .btn--light.btn--plug:active .btn__box { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+.btn--light.btn--quiet.btn--plug:focus-visible .btn__box, .btn--light.btn--quiet.btn--plug:active .btn__box { background: var(--cream); color: var(--ink); border-color: var(--cream); }
+
+/* ---------- Live status dot: open = filled, closed = hollow ---------- */
+.status-dot {
+  display: inline-block;
+  flex: none;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+[data-open="false"] .status-dot { background: transparent; box-shadow: inset 0 0 0 1px currentColor; opacity: .6; }
+
+/* ==========================================================================
+   Intro, "Connecting": a cream cable draws in, its plug seats into a jack,
+   the name rises, the panel splits at 49%. Timings scale with --k so the
+   whole intro ends within 2.5 s even after waiting for fonts.
+   ========================================================================== */
+.intro { display: none; }
+.intro-on .intro {
+  --k: 1;
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-intro);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.intro__half {
+  position: absolute;
+  left: 0; right: 0;
+  overflow: hidden;
+  background: var(--paper);
+  transition: transform calc(var(--k) * 1s) cubic-bezier(.87, 0, .13, 1);
+}
+.intro__half--top { top: 0; height: 49%; }
+.intro__half--bottom { top: 49%; bottom: 0; }
+.intro-split .intro__half--top { transform: translateY(-100%); }
+.intro-split .intro__half--bottom { transform: translateY(100%); }
+.intro__stage { position: absolute; left: 0; top: 0; width: 100%; height: var(--ivh, 100vh); }
+.intro__half--bottom .intro__stage { top: calc(var(--ivh, 100vh) * -.49); }
+
+.intro__corner {
+  position: absolute;
+  font: 400 12px/1 var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-62);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.intro__corner--tl, .intro__corner--tr { top: 24px; }
+.intro__corner--bl, .intro__corner--br { bottom: 24px; }
+.intro__corner--tl, .intro__corner--bl { left: 24px; }
+.intro__corner--tr, .intro__corner--br { right: 24px; }
+@media (min-width: 768px) {
+  .intro__corner--tl, .intro__corner--tr { top: 40px; }
+  .intro__corner--bl, .intro__corner--br { bottom: 40px; }
+  .intro__corner--tl, .intro__corner--bl { left: 64px; }
+  .intro__corner--tr, .intro__corner--br { right: 64px; }
+}
+.intro__caret {
+  display: inline-block;
+  width: .62em; height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -.2em;
+  background: currentColor;
+  animation: intro-caret 1s step-end infinite;
+}
+@keyframes intro-caret { 50% { opacity: 0; } }
+.intro__state--done, .is-seated .intro__state--on { display: none; }
+.is-seated .intro__state--done { display: inline; color: var(--ink); }
+
+/* The cable: a 2 px cream core with ink edges, so it reads on paper */
+.intro__cable { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.intro__cable path { stroke-dasharray: 1002; stroke-dashoffset: 1002; }
+.intro__edge { stroke: var(--ink-40); stroke-width: 4; }
+.intro__core { stroke: var(--cream); stroke-width: 2; }
+.intro-run .intro__cable path { animation: intro-draw calc(var(--k) * .9s) cubic-bezier(.16, 1, .3, 1) calc(var(--k) * .1s) both; }
+@keyframes intro-draw { from { stroke-dashoffset: 1002; } to { stroke-dashoffset: 0; } }
+
+/* The plug rides the tip of the cable (CSS motion path), then seats 3 px into the jack */
+.intro__plug {
+  position: absolute;
+  left: 0; top: 0;
+  overflow: visible;
+  offset-distance: 0%;
+  offset-rotate: auto;
+  offset-anchor: 0% 50%;
+  opacity: 0;
+  transition: translate .14s var(--ease);
+}
+.intro-run .intro__plug { animation: intro-plug calc(var(--k) * .9s) cubic-bezier(.16, 1, .3, 1) calc(var(--k) * .1s) both; }
+@keyframes intro-plug { from { offset-distance: 0%; opacity: 1; } to { offset-distance: 100%; opacity: 1; } }
+.is-seated .intro__plug { translate: 3px 0; }
+.intro__plug-body { fill: var(--cream); stroke: var(--ink-40); stroke-width: 1; }
+.intro__plug-collar { fill: var(--ink-62); }
+.intro__plug-tip { stroke: var(--ink-62); stroke-width: 1.6; stroke-linecap: round; }
+.intro__plug-ball { fill: var(--ink-62); }
+
+/* The jack: a 14 px ring; on seat its centre fills plum with one soft pulse */
+.intro__jack {
+  position: absolute;
+  left: 50%; top: var(--cy, 40vh);
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--ink-62);
+}
+.intro__jack-dot {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--ground);
+  transform: scale(0);
+  transition: transform calc(var(--k) * .3s) var(--ease);
+}
+.is-seated .intro__jack-dot { transform: none; }
+.intro__jack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--ground);
+  opacity: 0;
+}
+.is-seated .intro__jack::after { animation: intro-pulse calc(var(--k) * .4s) var(--ease) both; }
+@keyframes intro-pulse { from { transform: scale(1); opacity: .7; } to { transform: scale(2.6); opacity: 0; } }
+
+/* The name, under the jack and below the split line */
+.intro__word {
+  position: absolute;
+  left: 0; right: 0;
+  top: calc(var(--ivh, 100vh) * .49 + 16px);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.2rem + 3vw, 3.5rem);
+  line-height: 1.05;
+  letter-spacing: -.015em;
+  color: var(--ink);
+}
+.intro__word-mask { display: inline-block; overflow: hidden; padding-bottom: .12em; margin-bottom: -.12em; vertical-align: top; }
+.intro__word-mask > span { display: block; transform: translateY(110%); }
+.intro-run .intro__word-mask > span { animation: intro-rise calc(var(--k) * .8s) cubic-bezier(.16, 1, .3, 1) calc(var(--k) * .9s) both; }
+@keyframes intro-rise { from { transform: translateY(110%); } to { transform: none; } }
+
+/* ==========================================================================
+   Floating nav bar
+   ========================================================================== */
+.nav {
+  position: fixed;
+  top: var(--nav-top);
+  left: 16px; right: 16px;
+  z-index: var(--z-nav);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 61px;
+  padding-inline: 12px;
+  background: var(--graphite);
+  color: var(--cream);
+}
+@media (min-width: 560px) {
+  .nav { left: 50%; right: auto; width: 497px; transform: translateX(-50%); }
+}
+.nav__btn {
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  color: var(--cream);
+}
+.nav__mail { justify-self: start; }
+.nav__mail svg { width: 24px; height: 24px; transition: transform var(--dur-ui) var(--ease); }
+.nav__mail:hover svg { transform: translateY(-1px) rotate(-6deg); }
+.nav__mark {
+  display: grid;
+  place-items: center;
+  height: 44px;
+  padding-inline: 8px;
+  color: var(--cream);
+}
+.nav__mark svg { height: 28px; width: auto; aspect-ratio: var(--monogram-ratio, 1.6); }
+.nav__btn:focus-visible, .nav__mark:focus-visible { outline-color: var(--cream); outline-offset: -2px; }
+
+/* Two-line menu icon; the lower bar shortens on hover, a circled x when open */
+.menu-btn { position: relative; }
+/* Right of centre: a text link to the free check (from 768 px), then the menu */
+.nav__end { justify-self: end; display: flex; align-items: center; gap: 14px; }
+.nav__check {
+  display: none;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: linear-gradient(var(--cream-36), var(--cream-36)) 4px calc(100% - 12px) / calc(100% - 8px) 1px no-repeat;
+}
+.nav__check:hover { background-image: linear-gradient(var(--cream), var(--cream)); }
+.nav__check:focus-visible { outline-color: var(--cream); outline-offset: -2px; }
+@media (min-width: 768px) { .nav__check { display: inline-flex; } }
+.menu-btn__bar {
+  position: absolute;
+  top: 50%; right: 13.75px;
+  width: 16.5px; height: 1.5px;
+  background: currentColor;
+  transform-origin: center;
+  transition: transform var(--dur-ui) var(--ease), width var(--dur-ui) var(--ease);
+}
+.menu-btn__bar:nth-of-type(1) { transform: translateY(-3px); }
+.menu-btn__bar:nth-of-type(2) { transform: translateY(2px); }
+.menu-btn:hover .menu-btn__bar:nth-of-type(2) { width: 10px; }
+.menu-btn__ring {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--cream-55);
+  border-radius: 50%;
+  transform: scale(.6);
+  opacity: 0;
+  transition: transform var(--dur-ui) var(--ease), opacity var(--dur-ui) var(--ease);
+}
+.menu-btn[aria-expanded="true"] .menu-btn__bar { width: 12px; right: 16px; }
+.menu-btn[aria-expanded="true"] .menu-btn__bar:nth-of-type(1) { transform: rotate(45deg); }
+.menu-btn[aria-expanded="true"] .menu-btn__bar:nth-of-type(2) { transform: rotate(-45deg); }
+.menu-btn[aria-expanded="true"] .menu-btn__ring { transform: none; opacity: 1; }
+
+/* ==========================================================================
+   Full-screen menu: a black panel wipes down, links rise
+   ========================================================================== */
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-menu);
+  background: #000;
+  color: var(--cream);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.menu__inner {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s48);
+  padding: 128px var(--edge) var(--s32);
+}
+@media (min-width: 768px) { .menu__inner { padding-top: 136px; } }
+.menu__list a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--cream);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: clamp(2.75rem, 12.5vw, 8rem);
+  line-height: 1;
+  letter-spacing: -.045em;
+  transition: opacity .45s var(--ease);
+}
+.menu__index {
+  flex: none;
+  width: 22px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-tag);
+  font-weight: 400;
+  letter-spacing: .06em;
+  color: var(--cream-72);
+}
+.menu__mask { display: block; overflow: hidden; padding-block: .02em .1em; }
+.menu__word { display: block; }
+.menu__arrow { display: none; margin-left: auto; font-size: 20px; letter-spacing: 0; color: var(--cream-72); font-weight: 300; }
+/* What each link holds, in small mono beside it (desktop only) */
+.menu__desc { display: none; align-self: center; margin-left: 20px; padding-top: .35em; font-family: var(--font-mono); font-size: 13px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--cream-72); white-space: nowrap; }
+@media (min-width: 1024px) { .menu__desc { display: block; } }
+.menu__list:hover a { opacity: .3; }
+.menu__list:hover a:hover, .menu__list a:focus-visible { opacity: 1; }
+.menu__list a:focus-visible { outline-color: var(--cream); }
+@media (max-width: 767px) {
+  .menu__list a { height: 76px; font-size: min(11vw, 3.25rem); }
+  .menu__foot { grid-template-columns: 1fr; gap: 4px; }
+  .menu__foot a:nth-child(2) { justify-self: start; }
+  .menu__cta { margin-top: 8px; }
+  .menu__arrow { display: block; }
+}
+@media (min-width: 768px) {
+  /* Up to 128px, but all five links and the footer fit one screen */
+  .menu__list a { font-size: clamp(3.5rem, min(8.9vw, calc((100svh - 300px) / 5.4)), 8rem); }
+  .menu__index { width: 32px; }
+}
+.menu__foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  padding-top: var(--s24);
+  border-top: var(--hairline-dark);
+  font-size: var(--fs-small);
+  color: var(--cream);
+}
+.menu__foot a { display: inline-flex; align-items: center; min-height: 44px; }
+.menu__foot a:nth-child(2) { justify-self: end; }
+.menu__status { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--cream-72); }
+.menu__cta { grid-column: 1 / -1; justify-self: start; }
+@media (min-width: 768px) {
+  .menu__foot { grid-template-columns: auto auto 1fr auto; align-items: center; gap: 12px 36px; font-size: 13px; }
+  .menu__foot a:nth-child(2) { justify-self: start; }
+  .menu__cta { grid-column: auto; justify-self: end; }
+  .menu__foot a:nth-child(2) { justify-self: center; }
+  .menu__status { grid-column: auto; justify-self: end; }
+}
+
+/* ==========================================================================
+   Hero: the cord, quiet type
+   ========================================================================== */
+.hero {
+  position: relative;
+  min-height: max(100svh, 600px);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--ground);
+  color: var(--cream);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.hero.is-over-cable { cursor: grab; }
+.hero.is-holding { cursor: grabbing; }
+
+.hero__cable {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-touch-callout: none;
+}
+.hero__cable canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  transition: opacity .6s var(--ease);
+}
+.hero.is-live .hero__cable canvas { opacity: 1; }
+/* The still is rendered from the same scene (scripts/make-cable-still.mjs)
+   and sits where the live frame sits: top-right on phones, bottom-right wide. */
+.hero__still {
+  position: absolute;
+  top: 0; right: 0;
+  width: min(100%, 46.2svh);
+  height: auto;
+  transition: opacity .6s var(--ease);
+}
+.hero.is-live .hero__still,
+.cable-wait .hero:not(.show-still) .hero__still { opacity: 0; }
+@media (min-width: 1024px) {
+  .hero__still { top: auto; bottom: 0; width: auto; height: calc(min(100%, 64vw) * 1150 / 900); }
+}
+
+.hero__copy {
+  position: absolute;
+  z-index: var(--z-raised);
+  left: var(--edge);
+  right: var(--edge);
+  bottom: max(28px, 7svh);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.hero__copy > :not(.hero__actions) { max-width: 21rem; }
+@media (min-width: 768px) {
+  .hero__copy { left: calc(var(--edge) + 3.3vw); right: auto; top: max(120px, 25vh); bottom: auto; }
+  .hero__copy > :not(.hero__actions) { max-width: none; }
+}
+/* Mono labels on plum: at least 12 px at 72% cream */
+.hero__label { margin-bottom: 20px; font-size: 12px; color: var(--cream-72); white-space: nowrap; }
+@media (max-width: 559px) { .hero__label { letter-spacing: .08em; white-space: normal; line-height: 1.6; } }
+/* The free-check button: cream on plum, the brightest thing in the hero.
+   Phones: full width, 52 px tall, above the fold. */
+.hero .btn { box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .55); }
+.hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; }
+.hero__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: var(--fs-body);
+  color: var(--cream);
+  background: linear-gradient(var(--cream-36), var(--cream-36)) 0 calc(100% - 10px) / 100% 1px no-repeat;
+}
+.hero__link:hover { background-image: linear-gradient(var(--cream), var(--cream)); }
+.hero__link:focus-visible { outline-color: var(--cream); }
+.hero__micro { margin-top: 14px; font-size: 13px; color: var(--cream-72); }
+@media (max-width: 559px) {
+  .hero__actions { flex-direction: column; align-items: stretch; gap: 4px; }
+  .hero__actions .wa-anchor, .hero .btn { display: flex; width: 100%; }
+  .hero .btn { min-height: 52px; justify-content: space-between; }
+  .hero__link { align-self: flex-start; }
+}
+.hero__title {
+  margin-bottom: 24px;
+  font-size: 9.6vw;
+  line-height: 1.05;
+  color: var(--cream);
+  white-space: nowrap;
+}
+@media (min-width: 560px) {
+  .hero__title { font-size: var(--fs-hero); }
+  .hero__title .line-mask { display: inline-block; vertical-align: top; }
+}
+.hero__sub {
+  margin-bottom: 40px;
+  font-size: var(--fs-hero-sub);
+  font-weight: 300;
+  line-height: 1.42;
+  letter-spacing: -.02em;
+  color: var(--cream);
+}
+@media (max-width: 767px) {
+  .hero__sub .line-mask { display: inline; overflow: visible; }
+  .hero__sub .line-mask > span { display: inline; }
+}
+@media (min-width: 768px) { .hero__copy .hero__sub { max-width: min(37rem, 44vw); margin-bottom: 44px; } }
+
+/* The bottom strip: one line, 12 px at 72% cream; phones don't show it */
+.hero__strip {
+  position: absolute;
+  z-index: var(--z-raised);
+  left: calc(var(--edge) + 3.3vw); right: var(--edge);
+  bottom: 34px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s24);
+  color: var(--cream-72);
+  pointer-events: none;
+}
+.hero__strip .t-tag { font-size: 12px; }
+.hero__index { display: flex; flex-wrap: nowrap; gap: 6px 18px; white-space: nowrap; }
+.hero__index > span { white-space: nowrap; }
+.hero__index b { font-weight: 400; color: var(--cream-72); margin-right: 6px; }
+.hero__index > span + span::before { content: "·"; margin-right: 18px; color: var(--cream-72); }
+.hero__clock { font-variant-numeric: tabular-nums; }
+@media (max-width: 1023px) { .hero__index { gap: 6px 18px; letter-spacing: .06em; } }
+@media (max-width: 767px) { .hero__strip { display: none; } }
+.hero__scroll {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  background: var(--graphite);
+  color: var(--cream);
+  transition: transform var(--dur-ui) var(--ease);
+}
+.hero__scroll:hover { transform: translateY(2px); }
+.hero__scroll:focus-visible { outline-color: var(--cream); }
+
+.cable-fps {
+  position: absolute; right: var(--edge); top: 104px; z-index: var(--z-raised);
+  font: 400 11px/1 var(--font-mono);
+  color: var(--cream-55);
+}
+
+/* ==========================================================================
+   Preview words: an underlined word with a tiny thumbnail, inside a sentence
+   ========================================================================== */
+.pw {
+  position: relative;
+  display: inline;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw__word {
+  position: relative;
+  z-index: 0;
+  background:
+    linear-gradient(var(--ink-07), var(--ink-07)) 0 88% / 100% 0em no-repeat,
+    linear-gradient(var(--ink-30), var(--ink-30)) 0 100% / 100% 1px no-repeat;
+  padding-bottom: .1em;
+  transition: background-size .45s var(--ease);
+}
+.pw:hover .pw__word, .pw:focus-visible .pw__word, .pw.is-active .pw__word, .pw.is-swept .pw__word {
+  background-size: 100% .5em, 100% 1px;
+}
+/* "View" (or "Tap" on touch) after each preview title, so it reads as interactive */
+.pw__cue {
+  display: inline-block;
+  margin-left: .55em;
+  vertical-align: baseline;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-62);
+  transition: transform .3s var(--ease), color .3s var(--ease);
+}
+/* The cue stays on the line of the title's last word */
+.row__title .pw { white-space: nowrap; }
+.row__title .pw__word { white-space: normal; }
+.pw__cue-touch { display: none; }
+@media (hover: none) { .pw__cue-fine { display: none; } .pw__cue-touch { display: inline; } }
+.pw:hover .pw__cue, .pw:focus-visible .pw__cue, .pw.is-active .pw__cue { transform: translateX(3px); color: var(--ink); }
+.pw:focus-visible { outline: none; }
+.pw:focus-visible .pw__word { outline: 2px solid var(--ink); outline-offset: 3px; }
+.pw__thumb {
+  display: inline-block;
+  position: relative;
+  width: 1.55em;
+  height: 1.08em;
+  margin-left: .14em;
+  vertical-align: -.16em;
+  border-radius: var(--r-img);
+  overflow: hidden;
+  background: var(--ink-06);
+  transform: rotate(-2deg);
+  transition: transform .45s var(--ease);
+}
+.pw__thumb img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.pw:hover .pw__thumb, .pw.is-active .pw__thumb { transform: scale(1.18) rotate(-3deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .pw__thumb--wobble { animation: wobble 9s var(--ease) 2s infinite; }
+  .pw:hover .pw__thumb--wobble { animation: none; }
+}
+/* Motion only in the first 0.8 s of each 9 s cycle */
+@keyframes wobble {
+  0% { transform: rotate(-2deg); }
+  1.5% { transform: rotate(-9deg); }
+  3% { transform: rotate(7deg); }
+  4.5% { transform: rotate(-5deg); }
+  6% { transform: rotate(3deg); }
+  7.5% { transform: rotate(-1deg); }
+  8.9%, 100% { transform: rotate(-2deg); }
+}
+
+/* ---------- Preview card: one card follows the pointer; images wipe up through it ---------- */
+.pcard {
+  position: fixed;
+  left: 0; top: 0;
+  z-index: calc(var(--z-nav) - 1);
+  width: clamp(200px, 20vw, 300px);
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+.pcard__frame {
+  position: relative;
+  padding: 8px 8px 0;
+  background: var(--cream);
+  border-radius: var(--r-card);
+  box-shadow: 0 0 0 1px var(--ink-09), var(--shadow-card);
+}
+.pcard__slot {
+  position: relative;
+  aspect-ratio: var(--ratio, 4 / 3);
+  overflow: hidden;
+  border-radius: var(--r-img);
+  background: var(--ink-06);
+  container-type: inline-size;
+  transition: aspect-ratio .55s var(--ease);
+}
+.pcard__layer { position: absolute; inset: 0; }
+.pcard__layer img, .pcard__layer video { width: 100%; height: 100%; object-fit: cover; }
+.pcard__layer--mat { background: var(--paper); padding: 8px; }
+.pcard__layer--mat img { object-fit: contain; }
+.pcard__layer--left img, .pcard__layer--left video { object-position: 0 50%; }
+.pcard__cap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  min-height: 26px;
+  padding: 7px 0 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.3;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-62);
+}
+.pcard__cap b { font-weight: 400; color: var(--ink); }
+.pcard__cap span { flex: none; }
+
+/* "What I fix" card for Local SEO: typography only, no Google UI, logo or stars */
+.fix {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7cqw 7cqw 6cqw;
+  background: var(--paper);
+  color: var(--ink);
+}
+.fix__title { font-family: var(--font-display); font-size: clamp(14px, 7.4cqw, 22px); line-height: 1.1; letter-spacing: -.01em; max-width: 14em; }
+.fix__list { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6cqw; font-size: clamp(10px, 4.6cqw, 14px); line-height: 1.25; letter-spacing: -.005em; }
+.fix__list li { display: flex; gap: 2.6cqw; align-items: baseline; padding: 2.4cqw 0; border-top: 1px solid var(--ink-15); }
+.fix__list span { flex: none; font-family: var(--font-mono); font-size: .78em; letter-spacing: .06em; color: var(--ink-62); font-variant-numeric: tabular-nums; }
+/* "How one enquiry moves" card for Automations: plain words, a tiny real thumbnail */
+.flow {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 7cqw;
+  background: var(--paper);
+  color: var(--ink);
+}
+.flow__list { width: 64%; font-size: clamp(11px, 5.6cqw, 17px); line-height: 1.25; letter-spacing: -.01em; }
+.flow__list li { display: flex; gap: 2.6cqw; align-items: baseline; padding: 3cqw 0; border-top: 1px solid var(--ink-15); }
+.flow__list li:first-child { border-top: 0; padding-top: 0; font-weight: 500; }
+.flow__list span { flex: none; font-family: var(--font-mono); color: var(--ink-62); }
+.flow .flow__thumb { position: absolute; right: 6cqw; top: 7cqw; width: 34cqw; height: auto; object-fit: fill; border-radius: 2px; box-shadow: 0 0 0 1px var(--ink-15), 0 8px 18px -12px rgba(40, 18, 12, .5); transform: rotate(2deg); }
+.lightbox .fix, .lightbox .flow { position: relative; inset: auto; width: min(84vw, 560px); aspect-ratio: 4 / 3; container-type: inline-size; }
+
+/* ==========================================================================
+   Demo visuals, drawn from the real demo chat and screenshots. Shared by
+   "How it works" (home) and step 04 of the case study.
+   ========================================================================== */
+
+/* ---------- A phone, drawn as an outline (a drawn object, so it is the one
+   thing on the site with a large radius) ---------- */
+.phone {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 19rem);
+  height: 100%;
+  max-height: 31rem;
+  padding: 26px 12px 12px;
+  border: 1px solid var(--ink-30);
+  border-radius: 30px;
+  background: var(--paper);
+  position: relative;
+}
+.phone::before {
+  content: "";
+  position: absolute;
+  top: 11px; left: 50%;
+  width: 44px; height: 4px;
+  margin-left: -22px;
+  border-radius: 2px;
+  background: var(--ink-15);
+}
+.phone__bar {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px 14px 0 0;
+  background: var(--graphite);
+  color: var(--cream-72);
+  font-size: 12px;
+  line-height: 1.3;
+}
+.phone__bar b { font-family: var(--font-display); font-weight: 400; font-size: 17px; color: var(--cream); }
+.phone__chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 10px 14px;
+  overflow: hidden;
+  background: var(--cream);
+  /* Older messages scroll off the top, as in a real chat */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 44px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 44px);
+}
+.phone__chat > li { flex: none; }
+.phone__input {
+  padding: 10px 14px;
+  border-radius: 0 0 14px 14px;
+  background: var(--cream);
+  border-top: var(--hairline);
+  font-size: 13px;
+  color: var(--ink-62);
+}
+.bubble {
+  max-width: 88%;
+  padding: 10px 13px;
+  border-radius: var(--r-btn);
+  font-size: 15px;
+  line-height: 1.45;
+  letter-spacing: -.01em;
+}
+.bubble { padding: 9px 12px; border-radius: 12px; }
+.bubble--riya { align-self: flex-start; background: var(--ink-07); color: var(--ink); border-bottom-left-radius: 3px; }
+.bubble--patient { align-self: flex-end; background: var(--graphite); color: var(--cream); border-bottom-right-radius: 3px; }
+/* Masked the same way everywhere: "99999 XXX99", never blurred */
+.bubble__mask { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 2px; }
+.chips span { padding: 5px 10px; border-radius: 999px; background: var(--ink-07); font-size: 12.5px; line-height: 1.3; color: var(--ink-75); }
+
+/* ---------- Screenshot tiles: a plain label on top, the real crop below ---------- */
+.tiles { display: grid; gap: 16px; }
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.tile__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+/* The customer's own tool, after the plain label: its mark and name in mono */
+.tool { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 400; letter-spacing: .04em; color: var(--ink-62); white-space: nowrap; }
+.tool__icon { flex: none; width: 16px; height: 16px; }
+.tile__shot {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--r-img);
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--ink-15);
+  transition: box-shadow var(--dur-micro) var(--ease), transform var(--dur-ui) var(--ease);
+}
+.tile__shot picture { display: contents; }
+.tile__shot img { width: 100%; height: auto; }
+.tile__cue { margin-left: auto; vertical-align: baseline; }
+.tile:hover .tile__cue, .tile:focus-visible .tile__cue { transform: translateX(3px); color: var(--ink); }
+.tile:hover .tile__shot { box-shadow: 0 0 0 1px var(--ink-30), var(--shadow-tile); transform: translateY(-2px); }
+.tile:focus-visible { outline: none; }
+.tile:focus-visible .tile__shot { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/* The enquiry list: the followed booking's row (the last of four) is outlined in plum. On
+   phones the narrow crop (Name, Problem) is shown a little larger than the tile
+   and runs off its right edge, as a sheet does on a phone. */
+.tile__wrap { position: relative; display: block; --row-top: 80.09%; --c1: 23.9%; --c2: 45.5%; }
+.tile__mask, .tile__row { position: absolute; left: 0; right: 0; top: var(--row-top); bottom: 0; }
+.tile__mask { background: #F6F8F9; opacity: 0; }
+.tile__row { box-shadow: inset 0 0 0 1.5px var(--ground); border-radius: 1px; }
+.tile__sweep { position: absolute; inset: 0; background: rgb(46 26 34 / .16); transform: scaleX(0); transform-origin: left; opacity: 0; }
+@media (max-width: 767px) {
+  .tile__wrap { width: 413px; --c1: 30.5%; --c2: 30.5%; }
+  .tile--list .tile__shot::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 36px;
+    background: linear-gradient(to right, rgb(255 255 255 / 0), #fff);
+  }
+}
+
+/* ---------- Step 04: a drawn call-back card ---------- */
+/* Same frame and scale as the step 03 tiles: white, a hairline, 2 px radius */
+.callcard {
+  width: min(100%, 24rem);
+  padding: 18px 20px 16px;
+  background: #fff;
+  border-radius: var(--r-img);
+  box-shadow: 0 0 0 1px var(--ink-15);
+  color: var(--ink);
+}
+.callcard__name { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.1; letter-spacing: -.01em; }
+.callcard__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin-top: 8px;
+  padding-bottom: 14px;
+  border-bottom: var(--hairline);
+  font-size: 15px;
+  color: var(--ink-75);
+}
+.callcard__meta span + span::before { content: "·"; margin: 0 .5em; color: var(--ink-40); }
+.callcard__meta span:last-child { color: var(--ground); font-weight: 500; }
+.callcard__line { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 15px; color: var(--ink); }
+.callcard__line svg { flex: none; color: var(--ground); }
+
+/* ---------- "Get my free check": the message it will send, shown before you tap ---------- */
+.wa-anchor { position: relative; display: inline-block; }
+/* Rises above the button, so nothing on the page moves */
+.wa-bubble {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 12px);
+  z-index: 5;
+  display: grid;
+  gap: 6px;
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 48px));
+  padding: 9px 10px 10px;
+  border-radius: var(--r-card);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink-15), var(--shadow-card);
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s linear .45s;
+  visibility: hidden;
+  pointer-events: none;
+}
+.wa-anchor.is-open .wa-bubble { opacity: 1; transform: none; visibility: visible; transition: opacity .45s var(--ease), transform .45s var(--ease); }
+.wa-bubble__head { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--ink-62); }
+/* The outgoing message, in WhatsApp's own colours */
+.wa-bubble__msg {
+  position: relative;
+  justify-self: end;
+  padding: 7px 10px 6px;
+  border-radius: 8px 0 8px 8px;
+  background: #D9FDD3;
+  color: #111B21;
+  font-size: 14.5px;
+  line-height: 1.4;
+  letter-spacing: -.005em;
+}
+.wa-bubble__msg::after { content: ""; position: absolute; top: 0; right: -6px; border-left: 6px solid #D9FDD3; border-bottom: 8px solid transparent; }
+.wa-bubble__text { overflow-wrap: anywhere; }
+.wa-bubble__tick { margin-left: 6px; font-size: 11px; letter-spacing: -.12em; color: #53BDEB; }
+.wa-bubble__hint { font-size: 12.5px; color: var(--ink-62); }
+[data-dark] .wa-bubble, .hero .wa-bubble, .footer .wa-bubble, .menu .wa-bubble { box-shadow: 0 0 0 1px var(--cream-15), 0 24px 46px -24px rgba(0, 0, 0, .7); }
+.menu .wa-bubble { left: auto; right: 0; }
+
+/* ==========================================================================
+   Cursor: a dot and a ring; a black disc with a word over labelled things
+   ========================================================================== */
+.cursor { display: none; }
+html.has-cursor .cursor {
+  display: block;
+  position: fixed;
+  left: 0; top: 0;
+  z-index: var(--z-cursor);
+  pointer-events: none;
+}
+html.has-cursor, html.has-cursor * { cursor: none !important; }
+.cursor__dot, .cursor__ring {
+  position: fixed;
+  left: 0; top: 0;
+  border-radius: 50%;
+  mix-blend-mode: difference;
+  will-change: transform;
+}
+.cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: #fff; }
+.cursor__ring {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 1px solid #fff;
+  transition: width .4s var(--ease), height .4s var(--ease), margin .4s var(--ease), background-color .4s var(--ease), border-color .4s var(--ease);
+}
+.cursor.is-link .cursor__ring { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
+.cursor.is-label .cursor__ring {
+  width: 84px; height: 84px;
+  margin: -42px 0 0 -42px;
+  background: #000;
+  border-color: #000;
+  mix-blend-mode: normal;
+}
+.cursor.is-label .cursor__dot { opacity: 0; }
+.cursor__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0;
+  transform: scale(.6);
+  transition: opacity .3s var(--ease), transform .4s var(--ease);
+}
+.cursor.is-label .cursor__label { opacity: 1; transform: none; }
+.cursor.is-hidden .cursor__dot, .cursor.is-hidden .cursor__ring { opacity: 0; }
+
+/* ---------- Lightbox for previews and screenshot tiles ---------- */
+.lightbox {
+  margin: auto;
+  max-width: min(92vw, 720px);
+  max-height: 92svh;
+  padding: 12px 12px 0;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+.lightbox::backdrop { background: rgb(46 26 34 / .72); }
+.lightbox__media { display: grid; place-items: center; }
+.lightbox__media picture { display: contents; }
+.lightbox img, .lightbox video { max-height: calc(92svh - 80px); max-width: 100%; width: auto; margin-inline: auto; border-radius: var(--r-img); }
+.lightbox video { width: min(86vw, 1100px); height: auto; background: var(--paper); }
+.lightbox figcaption { min-height: 44px; display: flex; align-items: center; color: var(--ink-62); }
+.lightbox__close {
+  position: absolute;
+  right: 12px; bottom: 0;
+  min-height: 44px;
+  color: var(--ink);
+}
+.cable-note { top: 122px; }

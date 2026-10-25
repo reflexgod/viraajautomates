@@ -1,0 +1,15 @@
+# Dev tools, never deployed
+node_modules/
+# Original photos may contain GPS data in their metadata; never commit them
+source-assets/
+# Local reports
+.lighthouse/
+*.log
+# Real screenshots and photos before processing (npm run shots)
+photos/
+# oyin.design study tooling (captures of someone else's site stay local)
+scripts/.study/
+# Screenshots from the scroll check (node scripts/check-launch.mjs)
+.scroll-check/
+# Older review screenshots, kept on this computer only (they show earlier wording and names)
+docs/screenshots-local/
