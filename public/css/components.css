@@ -891,12 +891,13 @@
   transition: opacity .3s var(--ease), transform .45s var(--ease);
 }
 .is-open .chat { opacity: 1; transform: none; }
-/* Phones: the hero copy sits at the bottom of the screen, so its chat opens into room
-   kept free under the button (in the flow it would push the button up, away from
-   the second tap). */
+/* Phones: the hero copy sits at the bottom of the screen, so its chat opens as an
+   overlay below the button (in the flow it would push the button up, away from the
+   second tap). While open it may reach past the hero, over the top of the next
+   section; the first tap scrolls it into view (js/plugin.js). */
 @media (max-width: 767px) {
-  .hero .plugin__chat { position: absolute; top: 100%; left: 0; }
-  .hero__copy { padding-bottom: 250px; }
+  .hero .plugin__chat { position: absolute; z-index: 5; top: 100%; left: 0; }
+  .hero:has(.plugin.is-open) { z-index: 2; overflow: visible; }
 }
 .chat__head { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; background: #1F2C33; color: #fff; }
 .chat__head img { flex: none; width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
@@ -949,32 +950,39 @@ html:not(.js) .plugin:has(.plugin__btn:focus-visible) .chat { opacity: 1; transf
 
 
 /* ==========================================================================
-   Cursor: a dot and a ring; a black disc with a word over labelled things
+   Cursor: a dot and a ring, chalk on dark sections and ink on light ones;
+   a disc with a word over labelled things
    ========================================================================== */
 .cursor { display: none; }
 html.has-cursor .cursor {
+  --cur: var(--ink);
+  --cur-on: var(--cream);
+  --halo: rgba(245, 237, 226, .55);
   display: block;
   position: fixed;
   left: 0; top: 0;
   z-index: var(--z-cursor);
   pointer-events: none;
 }
+/* On dark sections (hero, nav, menu, footer): chalk, with an ink halo */
+html.has-cursor .cursor.on-dark { --cur: #F5EDE2; --cur-on: var(--ink); --halo: rgba(29, 24, 22, .45); }
 html.has-cursor, html.has-cursor * { cursor: none !important; }
 .cursor__dot, .cursor__ring {
   position: fixed;
   left: 0; top: 0;
   border-radius: 50%;
-  mix-blend-mode: difference;
   will-change: transform;
 }
-.cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: #fff; }
+/* The halo keeps it visible over pictures and the drawn phone */
+.cursor__dot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--cur); box-shadow: 0 0 0 1px var(--halo); transition: background-color .2s linear, box-shadow .2s linear, opacity .2s var(--ease); }
 .cursor__ring {
   display: grid;
   place-items: center;
   width: 34px; height: 34px;
   margin: -17px 0 0 -17px;
-  border: 1px solid #fff;
-  transition: width .4s var(--ease), height .4s var(--ease), margin .4s var(--ease), background-color .4s var(--ease), border-color .4s var(--ease);
+  border: 1px solid var(--cur);
+  box-shadow: 0 0 0 1px var(--halo), inset 0 0 0 1px var(--halo);
+  transition: width .4s var(--ease), height .4s var(--ease), margin .4s var(--ease), opacity .25s var(--ease), background-color .2s linear, border-color .2s linear, box-shadow .2s linear;
 }
 .cursor.is-link .cursor__ring { width: 56px; height: 56px; margin: -28px 0 0 -28px; }
 /* Over the Plug-in button: only the dot, so nothing sits on its label */
@@ -982,12 +990,15 @@ html.has-cursor, html.has-cursor * { cursor: none !important; }
 /* Over a preview word: only the thin ring, a little larger */
 .cursor.is-preview .cursor__ring { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
 .cursor.is-preview .cursor__dot { opacity: 0; }
+/* Over a paragraph: only the dot */
+.cursor.is-text .cursor__ring { opacity: 0; }
+/* The disc: ink with chalk text on light sections, chalk with ink text on dark ones */
 .cursor.is-label .cursor__ring {
   width: 84px; height: 84px;
   margin: -42px 0 0 -42px;
-  background: #000;
-  border-color: #000;
-  mix-blend-mode: normal;
+  background: var(--cur);
+  border-color: var(--cur);
+  box-shadow: 0 0 0 1px var(--halo);
 }
 .cursor.is-label .cursor__dot { opacity: 0; }
 .cursor__label {
@@ -996,7 +1007,7 @@ html.has-cursor, html.has-cursor * { cursor: none !important; }
   font-weight: 500;
   letter-spacing: .08em;
   text-transform: uppercase;
-  color: var(--cream);
+  color: var(--cur-on);
   opacity: 0;
   transform: scale(.6);
   transition: opacity .3s var(--ease), transform .4s var(--ease);

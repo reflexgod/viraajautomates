@@ -14,15 +14,18 @@ export function heroExit({ cable }) {
   const copy = [...hero.querySelectorAll('[data-hero-copy], .hero__strip')];
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   let last = 0;
-  onScroll(() => {
+  const update = () => {
     const r = hero.getBoundingClientRect();
     const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight * 0.2)));
     if (p === last) return;
     last = p;
     cable.exit(smooth(0.05, 0.95, p));
-    const o = 1 - Math.min(1, p * 1.8);
+    // While the Plug-in chat is open (a phone scrolls it into view), the copy stays put.
+    const o = hero.querySelector('.plugin.is-open') ? 1 : 1 - Math.min(1, p * 1.8);
     copy.forEach((el) => { el.style.opacity = o; el.style.transform = o < 1 ? `translateY(${-40 * (1 - o)}px)` : ''; });
-  });
+  };
+  onScroll(update);
+  hero.addEventListener('plugin-toggle', () => { last = -1; update(); });
 }
 
 // A cheap check only: creating a test WebGL context cost ~60 ms of main
@@ -41,13 +44,19 @@ export function pickTier() {
     : { name: 'low', dpr: 1.5, realShadows: false };
 }
 
-// The live cord only where it will run well. A device that once averaged
-// under 30 fps keeps the still image from then on. ?tier=... always tries.
+// The live cord only where it will run well. A device that averaged under
+// 24 fps keeps the still image for 7 days, then tries again. ?tier=... always tries.
 const OFF_KEY = 'va-cord-off';
+const OFF_DAYS = 7;
 function cordBlocked() {
   if (new URLSearchParams(location.search).has('tier')) return '';
-  try { const off = localStorage.getItem(OFF_KEY); if (off) return off; } catch (e) {}
-  if (navigator.deviceMemory && navigator.deviceMemory <= 4) return `device memory ${navigator.deviceMemory} GB`;
+  try {
+    const off = JSON.parse(localStorage.getItem(OFF_KEY) || 'null');
+    if (off && Date.now() - off.at < OFF_DAYS * 864e5) return `averaged ${off.fps} fps`;
+    localStorage.removeItem(OFF_KEY); // expired, or an old flag without a date
+  } catch (e) { try { localStorage.removeItem(OFF_KEY); } catch (err) { /* storage blocked */ } }
+  // Most phones report 4 GB; only the smallest devices get the still image.
+  if (navigator.deviceMemory && navigator.deviceMemory <= 2) return `device memory ${navigator.deviceMemory} GB`;
   if (navigator.connection?.saveData) return 'Save-Data is on';
   return '';
 }
@@ -88,17 +97,18 @@ export function startCable({ split = null, done = null } = {}) {
   const fallback = setTimeout(showStill, 4000);
   let token = 0;
 
-  // Fall back for good if the first 2 seconds average under 30 fps.
+  // Fall back (for OFF_DAYS) if 3 seconds average under 24 fps, measured after the
+  // first second, which holds the shader compile and the entrance.
   function watchFrames() {
     let frames = 0;
-    const t0 = performance.now() + 300; // skip the first frames of setup
+    const t0 = performance.now() + 1000;
     const tick = (now) => {
       if (!state.live) return;
       if (now >= t0) frames++;
-      if (now - t0 < 2000) { requestAnimationFrame(tick); return; }
+      if (now - t0 < 3000) { requestAnimationFrame(tick); return; }
       const fps = Math.round((frames * 1000) / (now - t0));
-      if (fps >= 30) { note(`${fps} fps · live`); return; }
-      try { localStorage.setItem(OFF_KEY, `averaged ${fps} fps`); } catch (e) {}
+      if (fps >= 24) { note(`${fps} fps · live`); return; }
+      try { localStorage.setItem(OFF_KEY, JSON.stringify({ fps, at: Date.now() })); } catch (e) {}
       note(`still image: averaged ${fps} fps`);
       state.live.destroy();
       state.live = null;

@@ -16,6 +16,9 @@ import { N } from './rope3d.js';
 const WALL_Z = -90;          // the wall the cord hangs in front of
 const GRAB_PX = 36;          // press within 36 px of the cord's centre line to take hold
 const PUSH_PX = 160;         // the pointer pushes the cord within 160 px
+// A mouse pushes the cord back as it comes near, so the cord settles out of GRAB_PX
+// reach; with a mouse a press this close to the cord still takes hold.
+const REACH_PX = 96;
 const DRAG_PX = 320;         // a held point can be pulled up to 320 px from where it was taken
 const LIFT = 1.25;           // entrance/exit: how far above its rest pose the cord hangs, in frame heights
 const LONG_PRESS_MS = 260;   // touch: hold this long to take hold of the cord
@@ -441,19 +444,20 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   };
   // What is under p: the plug (held by its end, keeping the offset so it
   // doesn't jump) or the nearest point of the cord. Null if neither.
-  function hit(p) {
+  function hit(p, reach = GRAB_PX) {
     const dx = plugSpan.dx, dy = plugSpan.dy;
     const along = (p.x - plugSpan.x) * dx + (p.y - plugSpan.y) * dy;
     if (along > -R && along < PLUG_LEN) {
       const across = Math.abs((p.x - plugSpan.x) * dy - (p.y - plugSpan.y) * dx);
       if (across < 34 * k) return { i: N - 1, ox: p.x - plugSpan.x, oy: p.y - plugSpan.y };
     }
-    let best = -1, bestD = Math.max(R, GRAB_PX / view.s);
+    let best = -1, bestD = Math.max(R, reach / view.s);
     for (let i = 1; i < N; i++) {
       const d = Math.hypot(p.x - pos[i * 3], p.y - pos[i * 3 + 1]);
       if (d < bestD) { bestD = d; best = i; }
     }
-    return best < 0 ? null : { i: best, ox: 0, oy: 0 };
+    // Held where it is, so it does not jump to the pointer.
+    return best < 0 ? null : { i: best, ox: p.x - pos[best * 3], oy: p.y - pos[best * 3 + 1] };
   }
 
   let held = -1, off = { x: 0, y: 0 }, longPress = 0, pressAt = null, pointerId = null, from = { x: 0, y: 0 };
@@ -480,7 +484,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
 
   function onDown(e) {
     if (onControl(e)) return;
-    const p = toFrame(e), h = hit(p);
+    const p = toFrame(e), h = hit(p, e.pointerType === 'mouse' ? REACH_PX : GRAB_PX);
     if (!h) return;
     if (e.pointerType === 'touch') {
       // A long press takes hold, so ordinary swipes still scroll the page.
@@ -500,7 +504,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     if (e.pointerType === 'mouse') {
       worker.postMessage({ type: 'pointer', x: p.x, y: p.y, active: true });
       if (fine) {
-        const over = !onControl(e) && !!hit(p);
+        const over = !onControl(e) && !!hit(p, REACH_PX);
         hero.classList.toggle('is-over-cable', over);
         setCursor(over ? 'Grab' : null);
       }

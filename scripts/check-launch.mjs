@@ -7,6 +7,8 @@ import { chromium } from 'playwright-core';
 import { checkScroll } from './check-scroll.mjs';
 import { checkHow } from './check-how.mjs';
 import { checkOverlap } from './check-overlap.mjs';
+import { checkCable } from './check-cable.mjs';
+import { checkCursor } from './check-cursor.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -324,7 +326,7 @@ await checkHow({ browser, base: BASE, report });
     const gap = await btn.evaluate((a) => Math.round(a.querySelector('.plugin__plug').getBoundingClientRect().left - a.querySelector('.plugin__socket svg').getBoundingClientRect().right));
     const t0 = Date.now();
     const nav = page.waitForURL(/wa\.me/, { timeout: 3000 }).then(() => Date.now() - t0).catch(() => -1);
-    if (!m) { await page.mouse.down(); await page.mouse.up(); } else await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+    if (!m) { await page.mouse.down(); await page.mouse.up(); } else { const nb = await btn.boundingBox(); await page.touchscreen.tap(nb.x + nb.width / 2, nb.y + nb.height / 2); }
     const connected = await page.waitForFunction((s) => document.querySelector(`${s} [data-plugin]`)?.classList.contains('is-connected'), sel, { timeout: 400 }).then(() => true).catch(() => false);
     // Snapped: the plug face sits exactly on the socket, the ticks are blue.
     await page.waitForTimeout(280);
@@ -348,26 +350,28 @@ await checkHow({ browser, base: BASE, report });
     const btn = page.locator(`${sel} .plugin__btn`);
     if (sel !== '.hero') { await btn.evaluate((a) => a.scrollIntoView({ block: 'center' })); await page.waitForTimeout(900); }
     const b = await btn.boundingBox();
+    const pageY = await page.evaluate((y) => Math.round(y + scrollY), b.y);
     if (m) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); else await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
     const mid = await page.waitForTimeout(300).then(() => page.evaluate((s) => document.querySelector(`${s} [data-chat-typed]`).textContent.length, sel));
     await page.waitForTimeout(1000);
-    const g = await page.evaluate((s) => {
+    const g = await page.evaluate(([s, m]) => {
       const root = document.querySelector(`${s} [data-plugin]`);
+      const scope = m && s === '.hero' ? document.querySelector('.hero') : document.body;
       const card = root.querySelector('.chat').getBoundingClientRect(), btnR = root.querySelector('.plugin__btn').getBoundingClientRect();
       const covered = [];
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() && !root.contains(n.parentElement) ? 1 : 2) });
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() && !root.contains(n.parentElement) ? 1 : 2) });
       for (let n = walker.nextNode(); n; n = walker.nextNode()) {
         if (getComputedStyle(n.parentElement).visibility !== 'visible' || n.parentElement.closest('.sr-only, [aria-hidden="true"], .cursor')) continue;
         const rg = document.createRange(); rg.selectNodeContents(n);
         for (const q of rg.getClientRects()) if (q.width > 1 && q.left < card.right && card.left < q.right && q.top < card.bottom && card.top < q.bottom) covered.push(n.textContent.trim().slice(0, 24));
       }
-      return { btnTop: Math.round(btnR.top), below: card.top >= btnR.bottom, onScreen: card.top >= 0 && card.bottom <= innerHeight, covered, w: Math.round(card.width), typed: root.querySelector('[data-chat-typed]').textContent.length, meta: getComputedStyle(root.querySelector('.chat__meta')).opacity, tap: getComputedStyle(root.querySelector('.chat__tap')).display !== 'none', time: /^\d\d:\d\d$/.test(root.querySelector('[data-chat-time]').textContent) };
-    }, sel);
-    const ok = g.below && g.onScreen && !g.covered.length && Math.abs(g.btnTop - Math.round(b.y)) <= 3 && mid > 0 && mid < MSG.length && g.typed === MSG.length && g.meta === '1' && g.time && g.tap === m && g.w === (m ? w - 48 : 340);
+      return { btnPageY: Math.round(btnR.top + scrollY), below: card.top >= btnR.bottom, onScreen: card.top >= 0 && card.bottom <= innerHeight, covered, w: Math.round(card.width), typed: root.querySelector('[data-chat-typed]').textContent.length, meta: getComputedStyle(root.querySelector('.chat__meta')).opacity, tap: getComputedStyle(root.querySelector('.chat__tap')).display !== 'none', time: /^\d\d:\d\d$/.test(root.querySelector('[data-chat-time]').textContent) };
+    }, [sel, m]);
+    const ok = g.below && g.onScreen && !g.covered.length && Math.abs(g.btnPageY - pageY) <= 3 && mid > 0 && mid < MSG.length && g.typed === MSG.length && g.meta === '1' && g.time && g.tap === m && g.w === (m ? w - 48 : 340);
     bub.push([ok, `${w} ${sel}: ${JSON.stringify({ ...g, midType: mid })}`]);
     await ctx.close();
   }
-  report('The mini chat: below the button (which stays put), typed in, then time and ticks; covers no text; on screen; "Tap again to send" on phones', bub.every((r) => r[0]), bub.map((r) => r[1]).join(' | '));
+  report('The mini chat: below the button (which keeps its place; a phone scrolls the chat into view), typed in, then time and ticks; covers no text (the phone hero: none in the hero); on screen; "Tap again to send" on phones', bub.every((r) => r[0]), bub.map((r) => r[1]).join(' | '));
   report('Plug-in button (2D plug): hover or first tap shows the message; click or second tap connects, then WhatsApp in this tab about 450 ms later', res6.every((r) => r[1]), res6.map((r) => `${r[0]}: ${r[2]}`).join(' | '));
   // Reduced motion: a plain link with an arrow, no socket, straight to WhatsApp.
   const rc = await fresh({ reducedMotion: 'reduce' });
@@ -403,6 +407,14 @@ await checkHow({ browser, base: BASE, report });
 
 // ---------- No text on text while scrolling: How it works (pin), process rows, services, the case study (sticky tabs) ----------
 await checkOverlap({ browser, base: BASE, report });
+
+
+// ---------- The hero cord: mouse and touch, and not switched off for ordinary phones ----------
+await checkCable({ browser, base: BASE, report });
+
+
+// ---------- The cursor: visible on dark and light sections, never over words ----------
+await checkCursor({ browser, base: BASE, report });
 
 
 // ---------- Keyboard ----------
@@ -444,5 +456,8 @@ await checkOverlap({ browser, base: BASE, report });
   await ctx.close();
 }
 await browser.close();
-const failed = results.filter((r) => !r[1]).length;
-console.log(`\n${results.length - failed}/${results.length} checks passed`);
+// The summary, and the exit code: 1 when any check failed, 0 only when all passed.
+const failed = results.filter((r) => !r[1]);
+console.log(`\n${results.length - failed.length}/${results.length} passed`);
+if (failed.length) console.log(`FAILED:\n${failed.map((r) => `  - ${r[0]}`).join('\n')}`);
+process.exit(failed.length ? 1 : 0);

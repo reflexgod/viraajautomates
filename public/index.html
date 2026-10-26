@@ -200,7 +200,7 @@
 <a class="skip-link" href="#main">Skip to content</a>
 
 <!-- ============ Floating nav bar ============ -->
-<header class="nav" data-nav>
+<header class="nav" data-theme="dark" data-nav>
   <a class="nav__btn nav__mail" href="mailto:viraaj.automates@gmail.com" data-cursor="Email">
     <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M3.5 6.25h17v11.5h-17z M3.5 6.75l8.5 6.25 8.5-6.25" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
     <span class="sr-only">Email Viraaj</span>
@@ -221,7 +221,7 @@
 </header>
 
 <!-- ============ Full-screen menu ============ -->
-<div class="menu" id="menu" data-menu role="dialog" aria-modal="true" aria-label="Menu" hidden>
+<div class="menu" id="menu" data-theme="dark" data-menu role="dialog" aria-modal="true" aria-label="Menu" hidden>
   <nav class="menu__inner" aria-label="Sections">
     <ol class="menu__list" data-menu-list>
       <li><a href="#services"><span class="menu__index" aria-hidden="true">01</span><span class="menu__mask"><span class="menu__word">Services</span></span><span class="menu__desc">What I set up</span><span class="menu__arrow" aria-hidden="true">→</span></a></li>
@@ -252,7 +252,7 @@
 <main id="main">
 
   <!-- ============ Hero: the braided cord, quiet type ============ -->
-  <section class="hero" id="top" aria-labelledby="hero-title" data-hero>
+  <section class="hero" data-theme="dark" id="top" aria-labelledby="hero-title" data-hero>
     <div class="hero__cable" data-cable aria-hidden="true">
       <!-- The cord at rest, rendered from the live scene: first paint, reduced motion, no WebGL -->
       <picture>
@@ -293,7 +293,7 @@
   </section>
 
   <!-- ============ About ============ -->
-  <section class="section about rail-grid" id="about" aria-labelledby="about-label">
+  <section data-theme="light" class="section about rail-grid" id="about" aria-labelledby="about-label">
     <h2 class="rail t-label" id="about-label"><span aria-hidden="true">( </span>About<span aria-hidden="true"> )</span></h2>
     <div class="content">
       <p class="t-statement" data-reveal="fade" data-sweep>I'm <button class="pw" type="button" data-preview="viraaj"><span class="pw__word">Viraaj</span><span class="pw__thumb" aria-hidden="true"><img src="images/viraaj-face.webp" width="80" height="56" alt="" loading="lazy" decoding="async"></span></button>. Customers usually go elsewhere for three reasons: they couldn't find you, they didn't trust what they saw, or nobody replied in time. I fix all three myself, starting with clinics in Mumbai and Pune. I build every system myself, test it with your team, and look after it once it's live.</p>
@@ -301,7 +301,7 @@
   </section>
 
   <!-- ============ Services: each row opens with the leak, then the fix and a proof you can check now ============ -->
-  <section class="section services rail-grid" id="services" aria-labelledby="services-label" data-services>
+  <section data-theme="light" class="section services rail-grid" id="services" aria-labelledby="services-label" data-services>
     <h2 class="rail t-label" id="services-label"><span aria-hidden="true">( </span>What I set up<span aria-hidden="true"> )</span></h2>
     <div class="content">
       <p class="t-statement services__intro" data-reveal="fade">Customers find a business, decide whether to trust it, then get in touch. If any step leaks, they go to someone else and you never find out. I fix all three, and keep a record of every website enquiry.</p>
@@ -393,7 +393,7 @@
   </section>
 
   <!-- ============ Plain terms ============ -->
-  <section class="section terms rail-grid" id="terms" aria-labelledby="terms-label">
+  <section data-theme="light" class="section terms rail-grid" id="terms" aria-labelledby="terms-label">
     <h2 class="rail t-label" id="terms-label"><span aria-hidden="true">( </span>Plain terms<span aria-hidden="true"> )</span></h2>
     <div class="content">
       <p class="t-statement" data-reveal="fade">You pay half to start and the other half when it goes live. The price is <span class="pen" data-pen>fixed in writing<svg class="pen__line" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path pathLength="1" d="M3 8.5C38 5 70 9.5 104 6.8S166 4.6 197 7.2"/></svg></span> for a year. Your website includes two rounds of changes. There's no lock-in: cancel any time with one month's notice.</p>
@@ -401,7 +401,7 @@
   </section>
 
   <!-- ============ How it works: one enquiry, four steps ============ -->
-  <section class="section how" id="how" aria-labelledby="how-title" data-how>
+  <section data-theme="light" class="section how" id="how" aria-labelledby="how-title" data-how>
     <div class="how__head rail-grid">
       <p class="rail t-label"><span aria-hidden="true">( </span>How it works<span aria-hidden="true"> )</span></p>
       <div class="content">
@@ -520,7 +520,7 @@
   </section>
 
   <!-- ============ How I work ============ -->
-  <section class="section process rail-grid" id="process" aria-labelledby="process-label" data-process>
+  <section data-theme="light" class="section process rail-grid" id="process" aria-labelledby="process-label" data-process>
     <h2 class="rail t-label" id="process-label"><span aria-hidden="true">( </span>How I work<span aria-hidden="true"> )</span></h2>
     <div class="content">
       <p class="process__intro t-lead" data-reveal="fade">Five steps, the same every time, so you always know what's next and what it costs.</p>
@@ -535,7 +535,7 @@
   </section>
 
   <!-- ============ Questions: the objections, in order ============ -->
-  <section class="section faq rail-grid" id="questions" aria-labelledby="faq-label">
+  <section data-theme="light" class="section faq rail-grid" id="questions" aria-labelledby="faq-label">
     <h2 class="rail t-label" id="faq-label"><span aria-hidden="true">( </span>Questions<span aria-hidden="true"> )</span></h2>
     <div class="content faq__list" data-reveal="fade">
       <details class="qa">
@@ -578,7 +578,7 @@
   </section>
 
   <!-- ============ Free report: the main conversion block ============ -->
-  <section class="section check rail-grid" id="check" aria-labelledby="check-label">
+  <section data-theme="light" class="section check rail-grid" id="check" aria-labelledby="check-label">
     <h2 class="rail t-label" id="check-label"><span aria-hidden="true">( </span>Free report<span aria-hidden="true"> )</span></h2>
     <div class="content">
       <p class="t-statement" data-reveal="fade">Send me your business name. Within one working day you'll get a short, private report: where you show up when people nearby look for you, what they see on your website, and where enquiries slip away, plus the three fixes I'd start with.</p>
@@ -605,7 +605,7 @@
 </main>
 
 <!-- ============ Footer ============ -->
-<footer class="footer" id="contact" data-footer>
+<footer class="footer" data-theme="dark" id="contact" data-footer>
   <div class="footer__plug" aria-hidden="true"><img src="images/cable-drop.webp" width="240" height="520" alt="" loading="lazy" decoding="async"></div>
   <div class="footer__main rail-grid">
     <p class="rail t-label" data-footer-fade>( Contact )</p>

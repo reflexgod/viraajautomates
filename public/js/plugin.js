@@ -11,8 +11,9 @@
 //   signal-orange ring, the ticks turn blue, "Connected ✓", and 450 ms after the
 //   click the page goes to WhatsApp (location.href, so no popup blocker).
 //   "Connected ✓" stays; a later click goes straight to WhatsApp.
-//   Touch: the first tap opens the chat ("Tap again to send"); the second
-//   connects and goes.
+//   Touch: the first tap opens the chat ("Tap again to send"), and when the chat
+//   would reach past the bottom of the screen the page glides up just enough to
+//   show it (0.6 s); the second tap connects and goes.
 //   Reduced motion, or no JS: a plain link with an arrow; the chat shows, in
 //   full and without movement, on keyboard focus only.
 import { SITE } from './config.js';
@@ -23,7 +24,7 @@ const clock = new Intl.DateTimeFormat('en-GB', { timeZone: SITE.timeZone, hour: 
 // The house easing, cubic-bezier(.22, 1, .36, 1), is close to a quintic ease-out.
 const ease = (t) => 1 - Math.pow(1 - t, 5);
 
-export function initPlugins({ cable = null } = {}) {
+export function initPlugins({ cable = null, lenis = null } = {}) {
   const plugins = [...document.querySelectorAll('[data-plugin]')];
   if (!plugins.length) return;
   // The chat shows the time in Mumbai now (with reduced motion too).
@@ -72,10 +73,13 @@ export function initPlugins({ cable = null } = {}) {
       root.classList.toggle('is-cord', cord);
       if (cord) cable.reach(sock(), { snap });
     };
-    const open = () => { root.classList.add('is-open'); type(); if (!connected) reach(); };
+    // The hero listens, so its copy does not fade while the chat is open.
+    const toggled = () => root.dispatchEvent(new CustomEvent('plugin-toggle', { bubbles: true }));
+    const open = () => { root.classList.add('is-open'); type(); if (!connected) reach(); toggled(); };
     const close = () => {
       if (going) return;
       root.classList.remove('is-open', 'is-armed');
+      toggled();
       armed = false;
       if (hint) hint.textContent = '';
       if (cord) { cable.reach(null); cord = false; root.classList.remove('is-cord'); }
@@ -109,6 +113,14 @@ export function initPlugins({ cable = null } = {}) {
         root.classList.add('is-armed');
         open();
         if (hint) hint.textContent = 'Tap again to send';
+        // The whole chat on screen: glide up by what it reaches past the bottom (and
+        // let the 3D plug aim again at the socket where it has moved to).
+        const inner = root.querySelector('.plugin__chat-in');
+        const dy = inner ? Math.ceil(a.getBoundingClientRect().bottom + inner.scrollHeight + 12 - innerHeight) : 0;
+        if (dy > 0) {
+          if (lenis) lenis.scrollTo(scrollY + dy, { duration: 0.6 }); else scrollBy({ top: dy, behavior: 'smooth' });
+          setTimeout(() => { if (armed && !going && cord) cable.reach(sock()); }, 700);
+        }
         if (cord) { cable.glow(1); setTimeout(() => { if (!going) cable.glow(0.35); }, 600); }
         return;
       }

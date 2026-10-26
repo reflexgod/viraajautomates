@@ -41,7 +41,7 @@ if (!motion) {
   root.classList.add('motion');
   const cable = startCable(introOn ? { split: introSplit, done: introDone } : {});
   // The hero's Plug-in button reaches for the live cord; the others use their 2D plug.
-  initPlugins({ cable });
+  initPlugins({ cable, lenis });
   heroEntrance({ cable, ready: introSplit });
   heroExit({ cable });
   initCursor({ gsap });

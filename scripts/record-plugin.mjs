@@ -79,9 +79,11 @@ for (const w of [1440, 375]) {
     const first = { cls: await page.locator('.hero [data-plugin]').getAttribute('class'), hint: await page.textContent('.hero [data-plugin-hint]'), url: page.url() };
     await page.screenshot({ path: `${out}/${w}-first-tap.png` });
     ok(`${w}: first tap opens the chat ("Tap again to send"), stays on the page`, /is-armed/.test(first.cls) && first.hint === 'Tap again to send' && !/wa\.me/.test(first.url) && !!since(tap1, 'is-open'), JSON.stringify(first));
+    // The first tap may have scrolled the chat into view: tap the button where it is now.
+    const nb = await page.locator('.hero .plugin__btn').boundingBox();
     clickAt = mark();
     const nav = go(clickAt);
-    await page.touchscreen.tap(c.x, c.y);
+    await page.touchscreen.tap(nb.x + nb.width / 2, nb.y + nb.height / 2);
     navMs = await nav;
   }
   const conn = since(clickAt, 'is-connected');
