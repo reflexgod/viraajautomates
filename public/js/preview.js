@@ -1,6 +1,7 @@
 // Preview words (the About photo and the service titles): an underlined trigger that shows what it names.
-// Fine pointer: one card follows the pointer (24 px below and right), tilts with
-// horizontal speed, and the next item's media wipes up through the same card.
+// Fine pointer: one card follows the pointer (16 px below and right, 0.55 s), tilts
+// with horizontal speed (up to 6°), and the next item's media wipes up through it.
+// The portrait is full-bleed with its caption inside (.pcard--photo).
 // Keyboard: focus shows the card under the trigger; Escape closes it.
 // Touch: the first tap places the card above or below the trigger, the second
 // opens it large, a tap elsewhere closes it.
@@ -17,7 +18,7 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Every item is real: a photo, a demo screenshot, the demo video, or a card drawn in code.
 // The service titles open these and nothing else (each row's WhatsApp link is its own line).
 const ITEMS = {
-  viraaj: { kind: 'image', src: 'images/viraaj-480.webp', full: 'images/viraaj-960.webp', fallback: 'images/viraaj.jpg', ratio: '4 / 5', caption: 'Viraaj · Mumbai', alt: 'Viraaj, who builds and looks after every system himself.' },
+  viraaj: { kind: 'image', photo: true, src: 'images/viraaj-480.webp', srcset: 'images/viraaj-480.webp 480w, images/viraaj-960.webp 960w', sizes: '(max-width: 767px) 260px, 380px', full: 'images/viraaj-960.webp', fallback: 'images/viraaj.jpg', ratio: '4 / 5', caption: 'Viraaj, Mumbai', alt: 'Viraaj, who builds and looks after every system himself.' },
   // The drawn checklist, until a real photo of the review QR card exists (npm run shots writes real-photos.js).
   seo: REAL_PHOTOS.includes('qr-card')
     ? { kind: 'image', src: 'images/real/qr-card-480.webp', full: 'images/real/qr-card-1600.webp', fallback: 'images/real/qr-card.jpg', ratio: '4 / 3', caption: 'A review QR card · Photo', alt: 'A review QR card on a clinic counter.' }
@@ -67,7 +68,7 @@ export function initPreviews({ gsap, lenis = null }) {
     } else {
       // Reduced motion: the video item shows the clinic page as a still.
       const src = it.kind === 'video' ? it.still : it.src;
-      el.innerHTML = `<img src="${src}" alt="" decoding="async">`;
+      el.innerHTML = `<img src="${src}"${it.srcset && it.kind === 'image' ? ` srcset="${it.srcset}" sizes="${it.sizes}"` : ''} alt="" decoding="async">`;
     }
     return el;
   }
@@ -85,6 +86,9 @@ export function initPreviews({ gsap, lenis = null }) {
     const it = ITEMS[key];
     const next = layer(key);
     slot.style.setProperty('--ratio', it.ratio);
+    card.classList.toggle('pcard--photo', !!it.photo);
+    // A card coming into view takes its shape at once, so it is placed by its real size.
+    if (!visible) { slot.style.transition = 'none'; void slot.offsetHeight; slot.style.transition = ''; }
     cap.innerHTML = caption(key);
     if (current && visible && gsap) {
       // The new media wipes up through the same card.
@@ -109,7 +113,7 @@ export function initPreviews({ gsap, lenis = null }) {
     if (gsap) {
       gsap.killTweensOf(card, 'opacity,scale');
       gsap.set(card, { visibility: 'visible' });
-      gsap.fromTo(card, { scale: 0.5 }, { scale: 1, duration: 0.5, ease: 'power3.out' });
+      gsap.fromTo(card, { scale: 0.92 }, { scale: 1, duration: 0.3, ease: 'power3.out' });
       gsap.to(card, { opacity: 1, duration: 0.3, ease: 'power3.out' });
     } else {
       card.style.visibility = 'visible';
@@ -125,7 +129,7 @@ export function initPreviews({ gsap, lenis = null }) {
       pauseVideo();
       words.forEach((w) => w.classList.remove('is-active'));
       if (gsap) {
-        gsap.to(card, { opacity: 0, scale: 0.85, duration: 0.3, ease: 'power3.out', onComplete: () => { if (!visible) { gsap.set(card, { visibility: 'hidden' }); current = null; } } });
+        gsap.to(card, { opacity: 0, scale: 0.92, duration: 0.3, ease: 'power3.out', onComplete: () => { if (!visible) { gsap.set(card, { visibility: 'hidden' }); current = null; } } });
       } else {
         card.style.visibility = 'hidden';
         card.style.opacity = 0;
@@ -145,10 +149,10 @@ export function initPreviews({ gsap, lenis = null }) {
     qr = gsap.quickTo(card, 'rotation', { duration: 0.5, ease: 'power3.out' });
   }
   function place(x, y, instant) {
-    // 24 px below and right of the pointer; flip to stay on screen.
-    let px = x + 24, py = y + 24;
-    if (px + W() > innerWidth - 12) px = x - 24 - W();
-    if (py + H() > innerHeight - 12) py = y - 24 - H();
+    // 16 px below and right of the pointer; flip to stay on screen.
+    let px = x + 16, py = y + 16;
+    if (px + W() > innerWidth - 12) px = x - 16 - W();
+    if (py + H() > innerHeight - 12) py = y - 16 - H();
     if (gsap) {
       if (instant) { gsap.set(card, { x: px, y: py }); qx(px); qy(py); } else { qx(px); qy(py); }
     } else {
@@ -183,11 +187,11 @@ export function initPreviews({ gsap, lenis = null }) {
       px = e.clientX; py = e.clientY;
       if (!visible) return;
       place(e.clientX, e.clientY);
-      // Tilt with horizontal speed, up to 8 degrees.
+      // Tilt with horizontal speed, up to 6 degrees.
       const now = performance.now();
       const v = (e.clientX - lastX) / Math.max(8, now - lastT);
       lastX = e.clientX; lastT = now;
-      qr?.(Math.max(-8, Math.min(8, v * 6)));
+      qr?.(Math.max(-6, Math.min(6, v * 6)));
     }, { passive: true });
     // The page moved under the pointer: whatever trigger is under it now decides.
     let queued = false;

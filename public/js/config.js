@@ -10,7 +10,8 @@ export const SITE = {
   whatsappDisplay: '+91 96533 75679',
   // "Ask me for a live demo" opens WhatsApp with this; the demo site itself is never linked.
   liveDemoText: 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?',
-  freeCheckText: "Hi Viraaj, I'd like the free check. Business name: ",
+  // Every "Get my free report" button and the nav's "Free report" link open WhatsApp with this.
+  freeReportText: 'Hi Viraaj, saw your website. Can I get the free report for my business?',
   city: 'Mumbai',
   timeZone: 'Asia/Kolkata',
   // Monday (1) to Saturday (6), 10:00 to 19:00 IST

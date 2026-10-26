@@ -6,6 +6,7 @@
   "scripts": {
     "serve": "node scripts/serve.mjs",
     "photo": "node scripts/process-photo.mjs",
+    "photos": "node scripts/process-photo.mjs",
     "logo": "node scripts/make-logo.mjs",
     "fonts": "node scripts/copy-vendor.mjs",
     "vendor": "node scripts/copy-vendor.mjs",

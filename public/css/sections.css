@@ -464,7 +464,7 @@
 .qa[open] .qa__sign::after { transform: scaleY(0); }
 .qa p { max-width: var(--measure-body); padding-bottom: 28px; color: var(--ink-75); }
 
-/* ---------- Free check ---------- */
+/* ---------- Free report ---------- */
 /* Three steps, one line on desktop, stacked on phones */
 .check__steps {
   display: flex;

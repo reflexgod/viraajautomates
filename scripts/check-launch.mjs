@@ -77,19 +77,25 @@ report('FAQ "Is my customers\' data safe?" names the AI service and the automati
 report('Privacy notice names the AI service and the automation server as processors', /AI service and the automation server I run\. Both act as processors/.test(readFileSync('public/privacy.html', 'utf8')));
 // Round 7 (owner, 26 Oct 2026): the hero is the name, a two-line sub-line and the Plug-in button.
 report('Hero H1 is the name, on one line', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Viraaj Automates<\/span><\/span>\s*<\/h1>/.test(index));
-// Round 6 (owner, 26 Oct 2026): the Plug-in button is the one call to action, everywhere.
-const PLUG_MSG = 'Hi Viraaj, saw your website. Can you do a free check for my business?';
+// Rounds 6 and 8 (owner, 26 Oct 2026): the Plug-in button is the one call to action, everywhere:
+// "Get my free report" ("Unlock my free report" under the report teaser), one message.
+const PLUG_MSG = 'Hi Viraaj, saw your website. Can I get the free report for my business?';
 const PLUG_HREF = `https://wa.me/919653375679?text=${encodeURIComponent(PLUG_MSG)}`;
 const pages6 = { '/': index, '/work/smile-dental/': caseHtml, '/404.html': readFileSync('public/404.html', 'utf8') };
 const plugCount = Object.fromEntries(Object.entries(pages6).map(([p, t]) => [p, (t.match(/<div class="plugin plugin--(?:light|dark)[^"]*"[^>]*data-plugin/g) || []).length]));
-const plugBad = Object.entries(pages6).flatMap(([p, t]) => [...t.matchAll(/<a class="plugin__btn"([^>]*)>/g)].filter((m) => !m[1].includes(`href="${PLUG_HREF}"`) || !m[1].includes('aria-label="Check my business on WhatsApp"') || / target=/.test(m[1])).map(() => p));
-report('The Plug-in button everywhere "Check my business" was: hero, menu, Free check, footer; case study menu, band, footer; 404 (same tab, its own message, aria-label)', plugCount['/'] === 4 && plugCount['/work/smile-dental/'] === 3 && plugCount['/404.html'] === 1 && plugBad.length === 0 && !/>Check my business <span class="btn__arrow"/.test(copy), `${JSON.stringify(plugCount)} ${plugBad.join(' ')}`);
+const plugBad = Object.entries(pages6).flatMap(([p, t]) => [...t.matchAll(/<a class="plugin__btn"([^>]*)>(?:<span[^>]*>){2}([^<]*)/g)].filter((m) => !m[1].includes(`href="${PLUG_HREF}"`) || !m[1].includes(`aria-label="${m[2]} on WhatsApp"`) || !/^(?:Get|Unlock) my free report$/.test(m[2]) || / target=/.test(m[1])).map((m) => `${p} ${m[2]}`));
+report('The Plug-in button everywhere: hero, menu, Free report, footer; case study menu, band, footer; 404 ("Get my free report", same tab, one message, aria-label)', plugCount['/'] === 4 && plugCount['/work/smile-dental/'] === 3 && plugCount['/404.html'] === 1 && plugBad.length === 0, `${JSON.stringify(plugCount)} ${plugBad.join(' ')}`);
+report('Nav "Free report" links send the same message', [index, caseHtml].every((t) => new RegExp(`<a class="nav__check" href="${PLUG_HREF.replace(/[?]/g, '\\?')}"[^>]*>Free report<`).test(t)));
+report('"free report" everywhere, never "free check" or "check my business"', !/free check|check my business/i.test(html.map((f) => readFileSync(f, 'utf8')).join('\n') + readFileSync('public/js/plugin.js', 'utf8')) && /\( <\/span>Free report<span/.test(index) && index.includes('After the free report you get a fixed price') && readFileSync('public/privacy.html', 'utf8').includes('the free report you asked for'));
+// Every button carries the mini WhatsApp chat: header, the message with time and ticks, the line about the report.
+const chats = Object.values(pages6).flatMap((t) => [...t.matchAll(/<div class="plugin__chat" aria-hidden="true">([\s\S]*?)<\/div><\/div><\/div>/g)].map((m) => m[1]));
+report('Each Plug-in button has the mini WhatsApp chat (Viraaj, the message, time and ticks, "Free · on WhatsApp · within one working day", "Tap again to send")', chats.length === 8 && chats.every((c) => c.includes('<b>Viraaj</b><small>usually replies within a day</small>') && c.includes(`data-chat-rest>${PLUG_MSG}<`) && c.includes('data-chat-time') && c.includes('chat__ticks') && c.includes('Free · on WhatsApp · within one working day') && c.includes('Tap again to send')), `${chats.length} chats`);
 const heroCopy = index.slice(index.indexOf('<div class="hero__copy"'), index.indexOf('<div class="hero__strip"'));
 const heroKids = [...heroCopy.matchAll(/\n {6}<(\w+) class="([\w-]+)/g)].map((m) => m[2]).join();
-report('Hero holds only "( Mumbai · Pune )", the H1, the sub-line and the Plug-in button; "Free · on WhatsApp…" is in its bubble', heroKids === 'hero__label,hero__title,hero__sub,plugin' && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
-  && heroCopy.includes('>Mumbai · Pune<') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.') && heroCopy.includes('<span class="plugin__bubble-meta">Free · on WhatsApp · within one working day</span><span class="plugin__bubble-tap">Tap again to open WhatsApp</span>'), heroKids);
+report('Hero holds only "( Mumbai · Pune )", the H1, the sub-line and the Plug-in button', heroKids === 'hero__label,hero__title,hero__sub,plugin' && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
+  && heroCopy.includes('>Mumbai · Pune<') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.'), heroKids);
 const checkSec = index.slice(index.indexOf('id="check"'), index.indexOf('</section>', index.indexOf('id="check"')));
-report('Free check: the report teaser (statement and three steps) static, no field; the Plug-in button', !/<input|data-compose|data-report|unlock/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec));
+report('Free report: the report teaser (statement and three steps) static, no field; "Unlock my free report"', !/<input|data-compose|data-report/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec) && checkSec.includes('<span class="plugin__text">Unlock my free report</span>'));
 report('No "Get my free check", no boxed arrows, no composer left', !/Get my free check|btn__box|btn--plug|compose__/.test(copy) && !existsSync('public/js/compose.js'));
 report('"no lock-in" only in Plain terms', (copy.match(/lock-in/gi) || []).length === 1 && /id="terms"[\s\S]*?no lock-in[\s\S]*?<\/section>/.test(index));
 report('No negative reassurance words ("spam", "never share", "no hidden", "no charge")', !/\bspam\b|never share|no hidden|no charge|nothing is sold/i.test(copy));
@@ -160,8 +166,8 @@ const fresh = async (opts = {}, seen = true) => {
   report('Every link works (internal pages, anchors, email)', broken.length === 0, broken.join(' | '));
   const waBad = wa.filter((h) => { const u = new URL(h); return u.pathname !== '/919653375679' || !u.searchParams.get('text'); });
   const texts = new Set(wa.map((h) => new URL(h).searchParams.get('text')));
-  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, saw your website. Can you do a free check for my business?", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
-  report('WhatsApp prefilled texts: free check, hero composer, Google, website, question, live demo', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
+  const want = ['Hi Viraaj, saw your website. Can I get the free report for my business?',"Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
+  report('WhatsApp prefilled texts: free report, Google, website, question, live demo', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
   report(`Every WhatsApp link opens +91 96533 75679 with prefilled text (${wa.length} links)`, wa.length > 0 && waBad.length === 0, [...new Set(wa.map((h) => new URL(h).searchParams.get('text')))].map((t) => `"${t}"`).join(' / '));
   await ctx.close();
 }
@@ -295,7 +301,7 @@ await checkHow({ browser, base: BASE, report });
 // ---------- The Plug-in button: hover, click, taps, reduced motion, no JS ----------
 // (The hero's 3D cord reaching for the socket, with GIFs: scripts/record-plugin.mjs.)
 {
-  const MSG = 'Hi Viraaj, saw your website. Can you do a free check for my business?';
+  const MSG = 'Hi Viraaj, saw your website. Can I get the free report for my business?';
   const stub = (ctx) => ctx.route('https://wa.me/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: 'whatsapp' }));
   const res6 = [];
   for (const [w, sel] of [[1440, '#check'], [1440, '#contact'], [375, '#check']]) {
@@ -313,39 +319,55 @@ await checkHow({ browser, base: BASE, report });
     let first = '';
     if (!m) { await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 }); await page.waitForTimeout(700); first = await cls(); }
     else { await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await page.waitForTimeout(700); first = await cls(); }
-    const look = await btn.evaluate((a) => { const cs = getComputedStyle(a), r = a.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), font: cs.fontFamily.split(',')[0], weight: cs.fontWeight, size: cs.fontSize, radius: cs.borderRadius, socket: getComputedStyle(a.querySelector('.plugin__socket')).display, bubble: getComputedStyle(a.closest('[data-plugin]').querySelector('.plugin__bubble')).visibility }; });
+    const look = await btn.evaluate((a) => { const cs = getComputedStyle(a), r = a.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), font: cs.fontFamily.split(',')[0], weight: cs.fontWeight, size: cs.fontSize, radius: cs.borderRadius, socket: getComputedStyle(a.querySelector('.plugin__socket')).display, bubble: getComputedStyle(a.closest('[data-plugin]').querySelector('.plugin__chat')).visibility }; });
+    // The 2D plug waits beside the socket, never over it.
+    const gap = await btn.evaluate((a) => Math.round(a.querySelector('.plugin__plug').getBoundingClientRect().left - a.querySelector('.plugin__socket svg').getBoundingClientRect().right));
     const t0 = Date.now();
     const nav = page.waitForURL(/wa\.me/, { timeout: 3000 }).then(() => Date.now() - t0).catch(() => -1);
     if (!m) { await page.mouse.down(); await page.mouse.up(); } else await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
     const connected = await page.waitForFunction((s) => document.querySelector(`${s} [data-plugin]`)?.classList.contains('is-connected'), sel, { timeout: 400 }).then(() => true).catch(() => false);
+    // Snapped: the plug face sits exactly on the socket, the ticks are blue.
+    await page.waitForTimeout(280);
+    const snap = await page.evaluate((s) => { const r = document.querySelector(`${s} [data-plugin]`); if (!r) return null; const p = r.querySelector('.plugin__plug').getBoundingClientRect(), k = r.querySelector('.plugin__socket svg').getBoundingClientRect(); return { dx: Math.round(p.left - k.left), dy: Math.round(p.top - k.top), tick: getComputedStyle(r.querySelector('.chat__ticks')).color }; }, sel).catch(() => null);
     const ms = await nav;
     const sent = decodeURIComponent(page.url());
-    res6.push([`${w} ${sel}`, /is-open/.test(first) && !/is-cord/.test(first) && (!m || /is-armed/.test(first)) && look.bubble === 'visible' && connected && ms >= 430 && ms < 1000 && sent.includes(MSG) && look.h >= 56 && look.w >= 280 && look.w <= 310 && look.font === 'Inter' && look.weight === '500' && look.size === '18px' && look.radius === '4px' && look.socket !== 'none', `${m ? 'tap' : 'hover'}: ${first.replace('plugin ', '')}; ${look.w}×${look.h} ${look.font} ${look.weight} ${look.size}; connected ${connected}; WhatsApp after ${ms} ms`]);
+    const fit = !!snap && snap.dx === 0 && snap.dy === 0 && snap.tick === 'rgb(83, 189, 235)';
+    res6.push([`${w} ${sel}`, /is-open/.test(first) && !/is-cord/.test(first) && (!m || /is-armed/.test(first)) && look.bubble === 'visible' && gap >= 6 && fit && connected && ms >= 430 && ms < 1000 && sent.includes(MSG) && look.h >= 56 && look.w === 300 && look.font === 'Inter' && look.weight === '500' && look.size === '18px' && look.radius === '4px' && look.socket !== 'none', `${m ? 'tap' : 'hover'}: ${first.replace('plugin ', '')}; ${look.w}×${look.h} ${look.font} ${look.weight} ${look.size}; plug ${gap} px beside the socket, snapped ${JSON.stringify(snap)}; connected ${connected}; WhatsApp after ${ms} ms`]);
     await ctx.close();
   }
-  // The hero's bubble: above the button on desktop, below it on phones; never on the name or the sub-line.
+  // The chat opens below the button, types the message in, covers no text, stays on screen;
+  // the button does not move (on a phone the second tap lands where the first did).
   const bub = [];
-  for (const [w, h] of [[1440, 900], [375, 812], [360, 740]]) {
+  for (const [w, h, sel] of [[1440, 900, '.hero'], [1440, 900, '#check'], [1440, 900, '#contact'], [375, 812, '.hero'], [360, 740, '.hero'], [375, 812, '#check']]) {
     const m = w < 768;
     const ctx = await fresh({ viewport: { width: w, height: h }, isMobile: m, hasTouch: m });
     await stub(ctx);
     const page = await ctx.newPage();
     await page.goto(BASE + '/', { waitUntil: 'load' });
     await page.waitForTimeout(1500);
-    const b = await page.locator('.hero .plugin__btn').boundingBox();
+    const btn = page.locator(`${sel} .plugin__btn`);
+    if (sel !== '.hero') { await btn.evaluate((a) => a.scrollIntoView({ block: 'center' })); await page.waitForTimeout(900); }
+    const b = await btn.boundingBox();
     if (m) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); else await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
-    await page.waitForTimeout(800);
-    const g = await page.evaluate(() => {
-      const r = (s) => document.querySelector(s).getBoundingClientRect();
-      const bubble = r('.hero .plugin__bubble'), btn = r('.hero .plugin__btn'), h1 = r('.hero__title'), sub = r('.hero__sub'), hero = r('.hero');
-      const hit = (a, c) => a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom;
-      const tap = document.querySelector('.hero .plugin__bubble-tap');
-      return { below: bubble.top >= btn.bottom, above: bubble.bottom <= btn.top, clear: !hit(bubble, h1) && !hit(bubble, sub), inside: bubble.top >= 0 && bubble.bottom <= Math.min(hero.bottom, innerHeight), tap: getComputedStyle(tap).display !== 'none', vis: getComputedStyle(document.querySelector('.hero .plugin__bubble')).visibility };
-    });
-    bub.push([(m ? g.below && g.tap : g.above && !g.tap) && g.clear && g.inside && g.vis === 'visible', `${w}: ${JSON.stringify(g)}`]);
+    const mid = await page.waitForTimeout(300).then(() => page.evaluate((s) => document.querySelector(`${s} [data-chat-typed]`).textContent.length, sel));
+    await page.waitForTimeout(1000);
+    const g = await page.evaluate((s) => {
+      const root = document.querySelector(`${s} [data-plugin]`);
+      const card = root.querySelector('.chat').getBoundingClientRect(), btnR = root.querySelector('.plugin__btn').getBoundingClientRect();
+      const covered = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() && !root.contains(n.parentElement) ? 1 : 2) });
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        if (getComputedStyle(n.parentElement).visibility !== 'visible' || n.parentElement.closest('.sr-only, [aria-hidden="true"], .cursor')) continue;
+        const rg = document.createRange(); rg.selectNodeContents(n);
+        for (const q of rg.getClientRects()) if (q.width > 1 && q.left < card.right && card.left < q.right && q.top < card.bottom && card.top < q.bottom) covered.push(n.textContent.trim().slice(0, 24));
+      }
+      return { btnTop: Math.round(btnR.top), below: card.top >= btnR.bottom, onScreen: card.top >= 0 && card.bottom <= innerHeight, covered, w: Math.round(card.width), typed: root.querySelector('[data-chat-typed]').textContent.length, meta: getComputedStyle(root.querySelector('.chat__meta')).opacity, tap: getComputedStyle(root.querySelector('.chat__tap')).display !== 'none', time: /^\d\d:\d\d$/.test(root.querySelector('[data-chat-time]').textContent) };
+    }, sel);
+    const ok = g.below && g.onScreen && !g.covered.length && Math.abs(g.btnTop - Math.round(b.y)) <= 3 && mid > 0 && mid < MSG.length && g.typed === MSG.length && g.meta === '1' && g.time && g.tap === m && g.w === (m ? w - 48 : 340);
+    bub.push([ok, `${w} ${sel}: ${JSON.stringify({ ...g, midType: mid })}`]);
     await ctx.close();
   }
-  report('Hero bubble: above the button on desktop; below it on phones with "Tap again" as its last line; never on the name or sub-line; on screen', bub.every((r) => r[0]), bub.map((r) => r[1]).join(' | '));
+  report('The mini chat: below the button (which stays put), typed in, then time and ticks; covers no text; on screen; "Tap again to send" on phones', bub.every((r) => r[0]), bub.map((r) => r[1]).join(' | '));
   report('Plug-in button (2D plug): hover or first tap shows the message; click or second tap connects, then WhatsApp in this tab about 450 ms later', res6.every((r) => r[1]), res6.map((r) => `${r[0]}: ${r[2]}`).join(' | '));
   // Reduced motion: a plain link with an arrow, no socket, straight to WhatsApp.
   const rc = await fresh({ reducedMotion: 'reduce' });
@@ -357,7 +379,7 @@ await checkHow({ browser, base: BASE, report });
   const rnav = rp.waitForURL(/wa\.me/, { timeout: 3000 }).then(() => Date.now() - r0).catch(() => -1);
   await rp.click('.hero .plugin__btn');
   const rms = await rnav;
-  report('Plug-in button with reduced motion: "Check my business →", straight to WhatsApp', rm.arrow !== 'none' && rm.socket === 'none' && rms >= 0 && rms < 400, `${JSON.stringify(rm)}, ${rms} ms`);
+  report('Plug-in button with reduced motion: "Get my free report →", straight to WhatsApp', rm.arrow !== 'none' && rm.socket === 'none' && rms >= 0 && rms < 400, `${JSON.stringify(rm)}, ${rms} ms`);
   await rc.close();
   // Without JavaScript: the same plain link.
   const nj = await fresh({ javaScriptEnabled: false });
@@ -406,7 +428,7 @@ await checkOverlap({ browser, base: BASE, report });
     if (!f.ring) noRing.push(f.label);
   }
   report('Keyboard: every focused element shows a 2 px outline', noRing.length === 0, noRing.slice(0, 6).join(' | '));
-  report('Keyboard: Tab reaches the service titles, buttons and footer links', ['Local SEO', 'Websites', 'Riya, AI receptionist', 'Automations', 'Find out where you stand on Google', 'Ask me for a live demo', 'Read the full case study', 'Check my business'].every((t) => seen.some((s) => s.includes(t))), `${seen.length} stops`);
+  report('Keyboard: Tab reaches the service titles, buttons and footer links', ['Local SEO', 'Websites', 'Riya, AI receptionist', 'Automations', 'Find out where you stand on Google', 'Ask me for a live demo', 'Read the full case study', 'Get my free report', 'Unlock my free report'].every((t) => seen.some((s) => s.includes(t))), `${seen.length} stops`);
   // Menu: focus trap, Escape, focus return
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.focus('[data-menu-btn]');

@@ -1,7 +1,9 @@
 // Custom cursor, fine pointers only: a 6 px dot (0.08 s follow) and a 34 px
 // ring (0.45 s), blended with difference. Over links the ring grows to 56 px;
 // over anything with [data-cursor] it becomes an 84 px black disc with a word
-// (VIEW, CHAT, EMAIL, GRAB, PULL). Press squeezes it, release springs back.
+// (VIEW, CHAT, EMAIL, GRAB, PULL). Over the Plug-in button only the dot shows; over a
+// preview word only the thin ring, grown to 44 px (a disc would hide the word).
+// Press squeezes it, release springs back.
 
 export function initCursor({ gsap }) {
   if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -31,6 +33,8 @@ export function initCursor({ gsap }) {
     }
     root.classList.toggle('is-label', !!word);
     root.classList.toggle('is-link', !word && !!target.closest?.('a[href], button, summary, label, [role="button"]'));
+    root.classList.toggle('is-plug', !!target.closest?.('.plugin__btn'));
+    root.classList.toggle('is-preview', !!target.closest?.('.pw'));
   }
 
   window.addEventListener('pointermove', (e) => {

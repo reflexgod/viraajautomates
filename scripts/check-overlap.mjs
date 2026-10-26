@@ -105,8 +105,9 @@ export async function checkOverlap({ browser, base = 'http://localhost:4173', re
           await page.waitForTimeout(pause);
           // Pins add scroll length: the section's end is measured again as we go.
           [from, to] = await span();
-          const y = await page.evaluate(() => scrollY);
-          if ((dir > 0 && y >= to) || (dir < 0 && y <= from)) break;
+          // The ends of the page end a pass too (a section at the top, or a short footer, leaves its ends out of reach).
+          const [y, max] = await page.evaluate(() => [scrollY, document.documentElement.scrollHeight - innerHeight]);
+          if ((dir > 0 && y >= Math.min(to, max - 1)) || (dir < 0 && y <= Math.max(from, 0))) break;
           if (dir > 0 && k > 0 && y < from) continue;
           await page.waitForTimeout(450);   // let step changes and reveals settle
           stops++;

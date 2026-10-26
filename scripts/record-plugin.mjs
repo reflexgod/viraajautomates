@@ -1,6 +1,6 @@
 // Records the Plug-in button at 1440 (hover, leave, hover, click) and 375 (tap,
 // tap) as real-time video, turns it into GIFs, and asserts what happens: the
-// bubble and the plug on hover (the 3D cord in the hero when it is live), the
+// chat and the plug on hover (the 3D cord in the hero when it is live), the
 // way back on leave, "Connected ✓" and WhatsApp about 450 ms after the click,
 // in the same tab; on a phone the first tap only shows, the second goes.
 // Frames come from the browser's screencast (as they are painted), with their times.
@@ -13,7 +13,7 @@ const folder = process.argv[2] || 'plugin';
 const out = `docs/screenshots/${folder}`;
 const tmp = `${out}/.video`;
 mkdirSync(out, { recursive: true });
-const MSG = 'Hi Viraaj, saw your website. Can you do a free check for my business?';
+const MSG = 'Hi Viraaj, saw your website. Can I get the free report for my business?';
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const ok = (name, cond, extra = '') => console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? '  ' + extra : ''}`);
 
@@ -60,7 +60,7 @@ for (const w of [1440, 375]) {
     await page.waitForTimeout(1000);
     const cls = await page.locator('.hero [data-plugin]').getAttribute('class');
     await page.screenshot({ path: `${out}/${w}-hover.png` });
-    ok(`${w}: hover raises the bubble and brings the plug (${/is-cord/.test(cls) ? '3D cord' : '2D plug'})`, /is-open/.test(cls) && (!live || /is-cord/.test(cls)) && !!since(h1, 'is-open'), `live ${live}, ${cls}`);
+    ok(`${w}: hover opens the chat below and brings the plug (${/is-cord/.test(cls) ? '3D cord' : '2D plug'})`, /is-open/.test(cls) && (!live || /is-cord/.test(cls)) && !!since(h1, 'is-open'), `live ${live}, ${cls}`);
     await page.mouse.move(c.x, c.y - 220, { steps: 6 });
     await page.waitForTimeout(900);
     ok(`${w}: leaving lets it go`, !/is-open/.test(await page.locator('.hero [data-plugin]').getAttribute('class')));
@@ -78,7 +78,7 @@ for (const w of [1440, 375]) {
     await page.waitForTimeout(1200);
     const first = { cls: await page.locator('.hero [data-plugin]').getAttribute('class'), hint: await page.textContent('.hero [data-plugin-hint]'), url: page.url() };
     await page.screenshot({ path: `${out}/${w}-first-tap.png` });
-    ok(`${w}: first tap shows the bubble and "Tap again to open WhatsApp", stays on the page`, /is-armed/.test(first.cls) && first.hint === 'Tap again to open WhatsApp' && !/wa\.me/.test(first.url) && !!since(tap1, 'is-open'), JSON.stringify(first));
+    ok(`${w}: first tap opens the chat ("Tap again to send"), stays on the page`, /is-armed/.test(first.cls) && first.hint === 'Tap again to send' && !/wa\.me/.test(first.url) && !!since(tap1, 'is-open'), JSON.stringify(first));
     clickAt = mark();
     const nav = go(clickAt);
     await page.touchscreen.tap(c.x, c.y);
