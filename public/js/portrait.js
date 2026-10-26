@@ -1,4 +1,4 @@
-// The About portrait: "Viraaj" in the About line shows his photo.
+// The About portrait: "Viraaj" in the About line shows the portrait photo.
 // From 1024 px it appears in the empty left column under "( About )", never
 // over the text, and ends above the next section's label. Narrower, that column is gone: it opens above the name
 // (below it when there is no room), inside the screen and under the nav bar.
