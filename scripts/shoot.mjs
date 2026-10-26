@@ -1,6 +1,6 @@
 // Screenshots for the review checkpoints, using the installed Chrome.
 //   node scripts/shoot.mjs <folder> [--path /] [--widths 1440,375] [--full]
-//        [--at "#services"] [--intro] [--reduced] [--wait 2600] [--query "tier=low"]
+//        [--at "#services"] [--reduced] [--wait 2600] [--query "tier=low"]
 // Saves to docs/screenshots/<folder>/<width>.png and prints console errors.
 // Needs the preview server running (npm run serve).
 import { mkdirSync } from 'node:fs';
@@ -37,21 +37,11 @@ for (const w of widths) {
     isMobile: mobile,
     reducedMotion: flag('reduced') ? 'reduce' : 'no-preference',
   });
-  if (!flag('intro')) await context.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
   const page = await context.newPage();
   const errors = [];
   page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) errors.push(`${m.type()}: ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   await page.goto(`http://localhost:4173${path}${query ? `?${query}` : ''}`, { waitUntil: 'load' });
-  if (flag('intro')) {
-    // Capture frames through the intro.
-    let prev = 0;
-    for (const t of [250, 700, 1100]) {
-      await page.waitForTimeout(t - prev);
-      prev = t;
-      await page.screenshot({ path: `${outDir}/${w}-intro-${t}.png` });
-    }
-  }
   if (at) {
     await page.evaluate((sel) => document.querySelector(sel)?.scrollIntoView(), at);
   }

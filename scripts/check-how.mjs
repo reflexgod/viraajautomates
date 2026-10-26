@@ -18,7 +18,6 @@ export async function checkHow({ browser, base = 'http://localhost:4173', folder
     const mobile = w < 768;
     for (const mode of texts) {
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1 });
-      await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
       const page = await ctx.newPage();
       await page.goto(`${base}/`, { waitUntil: 'load' });
       await page.waitForTimeout(800);
@@ -28,7 +27,7 @@ export async function checkHow({ browser, base = 'http://localhost:4173', folder
       await page.waitForTimeout(1200);
       const bad = [];
       for (let i = 0; i < 4; i++) {
-        const pin = await page.evaluate(() => { const st = window.ScrollTrigger?.getAll().find((t) => t.pin); return st ? [st.start, st.end] : null; });
+        const pin = await page.evaluate(() => window.__howPin?.() || null);
         if (pin) {
           // Early in step i's part of the pin, whatever split the page uses.
           const span = await page.evaluate(() => (window.__howSpan || 3.3));

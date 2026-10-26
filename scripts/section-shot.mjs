@@ -19,7 +19,6 @@ const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google
 for (const w of widths) {
   const mobile = w < 768;
   const ctx = await browser.newContext({ viewport: { width: w, height: mobile ? 812 : 900 }, deviceScaleFactor: mobile ? 2 : 1, isMobile: mobile, hasTouch: mobile, reducedMotion: reduced ? 'reduce' : 'no-preference' });
-  await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log('  pageerror', e.message));
   await page.goto(`http://localhost:4173${path}`, { waitUntil: 'load' });

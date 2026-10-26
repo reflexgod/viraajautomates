@@ -8,7 +8,7 @@
   /* ---------- Colour: paper, ink and the plum accent; cream and graphite are their light and dark ---------- */
   --paper: #F3EEE6;      /* page and light sections */
   --ink: #1D1816;        /* text and rules: warm near-black, never #000 */
-  --ground: #2E1A22;     /* the plum: hero and footer ground, the intro's jack */
+  --ground: #2E1A22;     /* the plum: hero and footer ground */
   --cream: #F5EDE2;      /* text on plum; snapshot frames; the cord */
   --graphite: #141110;   /* nav bar, dark buttons, active states */
   --signal: #F2662B;     /* signal orange: the Plug-in button's connect ring and lamp only */
@@ -22,7 +22,7 @@
   --ink-09: rgb(var(--ink-rgb) / .09);   /* dashed guides */
   --ink-15: rgb(var(--ink-rgb) / .15);   /* hairlines */
   --ink-30: rgb(var(--ink-rgb) / .30);   /* underline */
-  --ink-40: rgb(var(--ink-rgb) / .40);   /* the intro cable's edges */
+  --ink-40: rgb(var(--ink-rgb) / .40);   /* cable edges (How it works) */
   --ink-55: rgb(var(--ink-rgb) / .55);   /* labels */
   --ink-62: rgb(var(--ink-rgb) / .62);
   --ink-65: rgb(var(--ink-rgb) / .65);   /* intro lines, process body */
@@ -44,8 +44,9 @@
   --shadow-tile: 0 18px 40px -26px rgba(40, 18, 12, .6);
 
   /* ---------- Type: each font has one job ---------- */
-  --font-display: "Faculty Glyphic", Georgia, serif;          /* name, step titles, footer line */
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;  /* everything you read */
+  /* The "Fallback" faces (styles/fallbacks.css) are local fonts sized like the web fonts: no jump on swap. */
+  --font-display: "Faculty Glyphic", "Faculty Glyphic Fallback", Georgia, serif;          /* name, step titles, footer line */
+  --font-sans: "Inter", "Inter Fallback", "Inter Fallback Android", system-ui, -apple-system, sans-serif;  /* everything you read */
   --font-mono: "DM Mono", ui-monospace, monospace;             /* tiny labels only */
 
   --fs-hero: clamp(2.75rem, 4.6vw, 5.25rem);                  /* ~66px at 1440 */
@@ -83,7 +84,6 @@
   --z-raised: 10;
   --z-menu: 800;
   --z-nav: 900;
-  --z-intro: 8900;
   --z-grain: 9000;
   --z-cursor: 9500;
 

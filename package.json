@@ -14,7 +14,10 @@
     "og": "node scripts/make-og.mjs",
     "shoot": "node scripts/shoot.mjs",
     "still": "node scripts/make-cable-still.mjs",
-    "shots": "node scripts/process-shots.mjs"
+    "shots": "node scripts/process-shots.mjs",
+    "css": "node scripts/build-css.mjs",
+    "font-fallbacks": "node scripts/make-font-fallbacks.mjs",
+    "subset-fonts": "node scripts/subset-fonts.mjs"
   },
   "devDependencies": {
     "@fontsource-variable/inter": "^5.3.0",

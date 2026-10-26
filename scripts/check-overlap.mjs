@@ -39,7 +39,7 @@ function overlapsInPage() {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     const el = n.parentElement;
-    if (!el || el.closest('script, style, template, .sr-only, [data-intro], .cursor, .grain')) continue;
+    if (!el || el.closest('script, style, template, .sr-only, .cursor, .grain')) continue;
     if (opacity(el) < 0.05) continue;
     const c = clipOf(el);
     const range = document.createRange();
@@ -81,7 +81,6 @@ export async function checkOverlap({ browser, base = 'http://localhost:4173', re
     for (const [w, h] of sizes) {
       const mobile = w < 768;
       const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: 1 });
-      await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
       const page = await ctx.newPage();
       await page.goto(base + t.path, { waitUntil: 'load' });
       await page.waitForTimeout(1200);

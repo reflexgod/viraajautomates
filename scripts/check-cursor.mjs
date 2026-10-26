@@ -12,7 +12,6 @@ const CHALK = 'rgb(245, 237, 226)', INK = 'rgb(29, 24, 22)';
 export async function checkCursor({ browser, base = 'http://localhost:4173', report, folder = null }) {
   if (folder) mkdirSync(`docs/screenshots/${folder}`, { recursive: true });
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
   const page = await ctx.newPage();
   await page.goto(base + '/', { waitUntil: 'load' });
   await page.waitForTimeout(1500);

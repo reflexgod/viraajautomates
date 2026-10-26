@@ -13,7 +13,9 @@ export const SITE = {
   // Every "Get my free report" button and the nav's "Free report" link open WhatsApp with this.
   freeReportText: 'Hi Viraaj, saw your website. Can I get the free report for my business?',
   city: 'Mumbai',
-  timeZone: 'Asia/Kolkata',
+  // Asia/Kolkata is UTC+5:30 all year (no daylight saving), so the clocks add
+  // this offset instead of loading the browser's time-zone data at start-up.
+  utcOffsetMinutes: 330,
   // Monday (1) to Saturday (6), 10:00 to 19:00 IST
   hours: { days: [1, 2, 3, 4, 5, 6], open: 10, close: 19 },
 };

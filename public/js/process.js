@@ -20,8 +20,14 @@ export function initProcess() {
       const draw = Math.round(clamp((0.9 - top) / 0.35) * 1000) / 1000;
       const lift = Math.round(clamp((0.9 - top) / 0.4) * 1000) / 1000;
       const was = last[i];
-      if (draw !== was.draw) { row.style.setProperty('--draw', draw); was.draw = draw; }
-      if (lift !== was.lift) { row.style.setProperty('--lift', lift); was.lift = lift; }
+      // Plain properties on the row and its children, never an inherited custom
+      // property: that restyled every row's whole subtree on each scroll frame.
+      if (draw !== was.draw) { row.style.backgroundSize = `${draw * 100}% 1px`; was.draw = draw; }
+      if (lift !== was.lift) {
+        const o = String(0.4 + 0.6 * lift);
+        for (const c of row.children) c.style.opacity = o;
+        was.lift = lift;
+      }
       if (row.matches('[data-step]')) {
         const on = boxes[i].top < vh * 0.55 && boxes[i].bottom > vh * 0.55;
         if (on !== was.on) { row.classList.toggle('is-active', on); was.on = on; }

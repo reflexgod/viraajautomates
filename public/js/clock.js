@@ -7,23 +7,22 @@
 import { SITE } from './config.js';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const fmt = new Intl.DateTimeFormat('en-GB', {
-  timeZone: SITE.timeZone,
-  weekday: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-});
+const pad = (n) => String(n).padStart(2, '0');
+
+// Day of the week and "HH:MM" in Mumbai. Plain arithmetic: building an
+// Intl.DateTimeFormat with a time zone cost ~120 ms of a phone's start-up.
+export function mumbai(date = new Date()) {
+  const t = new Date(date.getTime() + SITE.utcOffsetMinutes * 60000);
+  return { day: t.getUTCDay(), hour: t.getUTCHours(), minute: t.getUTCMinutes(), time: `${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}` };
+}
 
 export function lineStatus(date = new Date()) {
-  const parts = Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));
-  const day = DAYS.indexOf(parts.weekday);
-  const mins = Number(parts.hour) * 60 + Number(parts.minute);
+  const { day, hour, minute, time } = mumbai(date);
+  const mins = hour * 60 + minute;
   const { days, open, close } = SITE.hours;
   const workday = days.includes(day);
   const isOpen = workday && mins >= open * 60 && mins < close * 60;
-  const opens = `${String(open).padStart(2, '0')}:00 IST`;
-  const time = `${parts.hour}:${parts.minute}`;
+  const opens = `${pad(open)}:00 IST`;
 
   if (isOpen) return { open: true, time, text: `Open now · ${SITE.city} ${time} IST`, reply: '' };
   // Before opening on a working day: back today. After closing: the next working day.

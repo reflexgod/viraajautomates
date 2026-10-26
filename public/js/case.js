@@ -9,7 +9,7 @@
 //   Video     plays only while on screen; never by itself under reduced motion
 //             (poster); the Pause / Play button works with mouse, touch and keys.
 //   Step 03   Asha's row writes itself into the enquiry list, once, in view.
-import { setupMotion } from './core.js';
+import { setupMotion, restoreScroll, prefetchOnHover } from './core.js';
 import { initClock } from './clock.js';
 import { initNav } from './nav.js';
 import { initReveals } from './reveal.js';
@@ -19,6 +19,8 @@ import { initCursor } from './cursor.js';
 import { whenSeen } from './scroll.js';
 
 window.__vaStarted = true;
+// gsap and Lenis load beside this module (the loader at the end of the page).
+await window.__vaLibs;
 const root = document.documentElement;
 const { gsap, lenis, motion, reduced, goTo } = setupMotion({ offset: -130 });
 
@@ -26,6 +28,8 @@ initClock();
 initNav({ gsap, lenis, goTo });
 initTiles();
 initPlugins();
+prefetchOnHover();
+restoreScroll(lenis);
 
 /* ---------- Tabs ---------- */
 const tabs = [...document.querySelectorAll('[data-tab]')];

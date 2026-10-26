@@ -23,7 +23,6 @@ for (const w of [1440, 375]) {
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
   const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 1, isMobile: m, hasTouch: m });
-  await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
   // Stand in for WhatsApp, so the navigation can be seen and timed.
   await ctx.route('https://wa.me/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<body style="margin:0;display:grid;place-items:center;height:100vh;font:16px sans-serif;background:#ECE5DD">WhatsApp</body>' }));
   // Every class change on the hero's button, with its time, reported out of the page as it happens.

@@ -1,7 +1,7 @@
 // Renders the hero cable at rest, from the same WebGL scene the site uses,
 // into still images for first paint, reduced motion and no-WebGL browsers:
 //   public/images/cable-wide.webp   frame region x -200..900, y -250..900
-//   public/images/cable-tall.webp   frame region x 0..390,    y 0..844
+//   public/images/cable-tall.webp   frame region x 0..390,    y 0..844  (wide and tall also as .avif)
 //   public/images/cable-drop.webp   the plug end hanging into the footer, x 0..240, y 0..520
 // Needs the preview server (npm run serve). Run with: npm run still
 import { chromium } from 'playwright-core';
@@ -50,6 +50,12 @@ for (const shot of SHOTS) {
   const out = `public/images/cable-${shot.name}.webp`;
   const info = await sharp(png).webp({ quality: 78, alphaQuality: 80, effort: 6 }).toFile(out);
   console.log(`${out}  ${info.width}x${info.height}  ${(info.size / 1024).toFixed(1)} KB`);
+  // The hero's two are the page's largest paint: an AVIF about half the size goes first in the <picture>.
+  if (shot.name !== 'drop') {
+    const avif = out.replace('.webp', '.avif');
+    const ai = await sharp(png).avif({ quality: 52, effort: 6 }).toFile(avif);
+    console.log(`${avif}  ${ai.width}x${ai.height}  ${(ai.size / 1024).toFixed(1)} KB`);
+  }
   await page.close();
 }
 await browser.close();

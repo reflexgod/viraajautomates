@@ -1,9 +1,9 @@
 // Viraaj Automates: home page script.
 // Everything here is an enhancement: the page reads and every link works without it.
-import { setupMotion, loadScrollTrigger } from './core.js';
+import { setupMotion, savedScroll, restoreScroll, prefetchOnHover } from './core.js';
 import { initClock } from './clock.js';
 import { initNav } from './nav.js';
-import { heroEntrance, heroExit, startCable } from './hero.js';
+import { heroExit, startCable } from './hero.js';
 import { initReveals } from './reveal.js';
 import { initPreviews } from './preview.js';
 import { initHow } from './how.js';
@@ -14,24 +14,16 @@ import { initCursor } from './cursor.js';
 import { whenSeen } from './scroll.js';
 
 window.__vaStarted = true;
+// gsap and Lenis load beside this module (the loader at the end of index.html).
+await window.__vaLibs;
 const root = document.documentElement;
 const { gsap, lenis, motion, goTo, beforeGoTo } = setupMotion();
-
-// The intro (if it is playing) hands over when its panel splits, and is done a second later.
-const introOn = root.classList.contains('intro-on');
-const introSplit = new Promise((done) => {
-  if (!introOn || root.classList.contains('intro-split')) done();
-  else addEventListener('va:intro-split', done, { once: true });
-});
-const introDone = new Promise((done) => {
-  if (!introOn || !document.querySelector('[data-intro]')) done();
-  else addEventListener('va:intro-done', done, { once: true });
-});
 
 initClock();
 initNav({ gsap, lenis, goTo });
 initPreviews({ gsap, lenis });
 initTiles();
+prefetchOnHover();
 
 if (!motion) {
   root.classList.add('reveal-done');
@@ -39,29 +31,30 @@ if (!motion) {
   initPlugins();
 } else {
   root.classList.add('motion');
-  const cable = startCable(introOn ? { split: introSplit, done: introDone } : {});
+  const cable = startCable();
   // The hero's Plug-in button reaches for the live cord; the others use their 2D plug.
   initPlugins({ cable, lenis });
-  heroEntrance({ cable, ready: introSplit });
   heroExit({ cable });
   initCursor({ gsap });
   // Reveals and rows use IntersectionObservers and one scroll loop: cheap, so at once.
   initReveals({ gsap });
   initProcess();
-  // The one ScrollTrigger (the "How it works" pin) is set up when the section
-  // comes within a screen of the viewport, before any in-page jump, or at once
-  // if the page opens below the hero. Its first measure is the costliest task
-  // on the page, so it stays out of the first seconds.
-  let howReady = null;
+  // "How it works" (tabs, or the sticky pin from 1024 px) sets itself up when
+  // the main thread is first idle, when the section comes within a screen, or
+  // before any in-page jump; at once if the page opens below the top (a reload
+  // or the back button), so the page is its final height before the browser
+  // restores the scroll.
+  let howReady = false;
   const setupHow = () => {
-    if (!howReady) {
-      howReady = Promise.resolve(initHow({ gsap, loadScrollTrigger, lenis }));
-      // Fonts change line lengths; measure again if they arrive later.
-      if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(() => window.ScrollTrigger?.refresh());
-    }
-    return howReady;
+    if (howReady) return;
+    howReady = true;
+    initHow({ gsap, lenis });
   };
   beforeGoTo(setupHow);
-  if (scrollY > innerHeight) setupHow();
-  else whenSeen(document.querySelector('[data-how]'), setupHow, '0px 0px 100% 0px');
+  if (scrollY > 0 || savedScroll() !== null) setupHow();
+  else {
+    whenSeen(document.querySelector('[data-how]'), setupHow, '0px 0px 100% 0px');
+    if ('requestIdleCallback' in window) requestIdleCallback(setupHow, { timeout: 3000 });
+  }
 }
+restoreScroll(lenis);

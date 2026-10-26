@@ -1,11 +1,11 @@
 #!/bin/sh
 # Lighthouse, mobile (simulated slow 4G, 4x CPU), N runs, prints the median.
 #   sh scripts/lh.sh <name> <path> [runs]     e.g. sh scripts/lh.sh home / 3
-# Reports go to .lighthouse/<name>-<n>.json (git-ignored). Needs npm run serve.
+# Reports go to .lighthouse/<name>-<n>.json (git-ignored). Needs npm run serve (LHPORT=4180 for another server).
 name=$1; path=$2; runs=${3:-3}
 mkdir -p .lighthouse
 for i in $(seq 1 "$runs"); do
-  npx --yes lighthouse@12 "http://localhost:4173$path" --quiet --output=json --output-path=".lighthouse/$name-$i.json" \
+  npx --yes lighthouse@12 "http://localhost:${LHPORT:-4173}$path" --quiet --output=json --output-path=".lighthouse/$name-$i.json" \
     --chrome-path="C:/Program Files/Google/Chrome/Application/chrome.exe" --chrome-flags="--headless=new" >/dev/null 2>&1
 done
 node -e '

@@ -59,7 +59,6 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader'] });
   const fresh = async (opts = {}) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...opts });
-    await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
     return ctx;
   };
   let failed = 0;

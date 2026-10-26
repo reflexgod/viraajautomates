@@ -1,4 +1,4 @@
-// Self-review screenshots at 1440 and 375: the intro at 0.3, 1.0 and 1.6 s,
+// Self-review screenshots at 1440 and 375: the hero at 0.3 and 1.0 s,
 // every home section, the hover card on each service title, each "How it
 // works" step, the free-check message, and the case study top to bottom.
 // Also prints each section's height and any console errors or sideways overflow.
@@ -37,25 +37,23 @@ for (const w of widths) {
   const errors = [];
   const ctxOpts = { viewport: { width: w, height: h }, deviceScaleFactor: mobile ? 2 : 1, hasTouch: mobile, isMobile: mobile };
 
-  // 1. The intro, as a first visit
+  // 1. The hero from first paint
   {
     const ctx = await browser.newContext(ctxOpts);
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
     const t0 = Date.now();
     await page.goto('http://localhost:4173/', { waitUntil: 'commit' });
-    await page.waitForSelector('[data-intro]', { state: 'attached', timeout: 5000 }).catch(() => {});
-    for (const t of [300, 1000, 1600]) {
+    for (const t of [300, 1000]) {
       const wait = t - (Date.now() - t0);
       if (wait > 0) await page.waitForTimeout(wait);
-      await shot(page, `${w}-intro-${t}`);
+      await shot(page, `${w}-hero-${t}`);
     }
     await ctx.close();
   }
 
-  // 2. Home sections (intro already seen this session)
+  // 2. Home sections
   const ctx = await browser.newContext(ctxOpts);
-  await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
   const page = await ctx.newPage();
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));

@@ -65,6 +65,8 @@ export function initNav({ gsap, lenis, goTo }) {
   }
 
   btn.addEventListener('click', () => (isOpen ? close() : open()));
+  // Back to this page from the in-memory cache (the menu's "Case study" link): menu closed.
+  addEventListener('pageshow', (e) => { if (e.persisted && isOpen) close({ restoreFocus: false }); });
 
   // A section link closes the menu and jumps there while the panel wipes away.
   menu.addEventListener('click', (e) => {

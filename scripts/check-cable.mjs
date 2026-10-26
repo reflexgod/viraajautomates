@@ -19,12 +19,11 @@ export async function checkCable({ browser, base = 'http://localhost:4173', repo
   // ---------- Mouse, 1440 ----------
   {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-    await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
     const page = await ctx.newPage();
     await page.goto(base + '/', { waitUntil: 'load' });
     await page.mouse.move(700, 700);
     await page.waitForFunction(() => document.querySelector('[data-hero]').classList.contains('is-live'), null, { timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(4500);   // the cord drops in, then settles
+    await page.waitForTimeout(4500);   // the cord fades in at rest; the pointer's push settles
     const cls = () => page.getAttribute('[data-hero]', 'class');
     // Every place the cord answers to; take one mid-cord (near its anchors it hardly moves,
     // and the pointer's push is what used to keep a press from taking hold).
@@ -76,7 +75,6 @@ export async function checkCable({ browser, base = 'http://localhost:4173', repo
     for (const [name, c, wantLive] of cases) {
       const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
       await ctx.addInitScript(({ mem, flag }) => {
-        try { sessionStorage.setItem('va-intro', '1'); } catch (e) {}
         if (mem) Object.defineProperty(Navigator.prototype, 'deviceMemory', { get: () => mem });
         if (flag && !sessionStorage.getItem('flag-set')) { localStorage.setItem('va-cord-off', flag); sessionStorage.setItem('flag-set', '1'); }
       }, c);
@@ -93,7 +91,6 @@ export async function checkCable({ browser, base = 'http://localhost:4173', repo
   // ---------- Touch, 375: long-press takes hold; a quick swipe scrolls ----------
   {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
-    await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
     const page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
     const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });

@@ -1,7 +1,9 @@
 // "How it works": one enquiry in four steps.
 //
 // From 1024 px the board (steps and stage, not the heading or the buttons) pins for 110% of the
-// viewport. Scroll progress picks the step: steps 01-03 get a third of the
+// viewport. The pin is CSS position: sticky (styles/sections.css), so the
+// browser holds it on its compositor: it never jumps on iOS Safari or Android
+// Chrome, and nothing has to be measured when the page above changes height. Scroll progress picks the step: steps 01-03 get a third of the
 // pin each and step 04 goes live just before the end, so the pin lets go as
 // soon as the story is told (no empty screen before the buttons). A plum
 // signal runs down the cream cable beside the steps and arrives at a step's
@@ -14,12 +16,12 @@
 // Inactive panels are inert, so Tab never lands inside a hidden one.
 // Reduced motion or no JS: nothing here runs; the CSS shows the steps stacked.
 import { playEnquiry } from './tiles.js';
+import { onScroll } from './scroll.js';
 
-export function initHow({ gsap, loadScrollTrigger, lenis }) {
+export function initHow({ gsap, lenis }) {
   const how = document.querySelector('[data-how]');
   if (!how || !gsap) return;
   const board = how.querySelector('[data-how-board]');
-  const pinBox = how.querySelector('[data-how-pin]') || board;
   const items = [...how.querySelectorAll('[data-how-item]')];
   const tabs = items.map((it) => it.querySelector('[data-how-tab]'));
   const panels = items.map((it) => it.querySelector('[data-how-panel]'));
@@ -27,7 +29,9 @@ export function initHow({ gsap, loadScrollTrigger, lenis }) {
   const signal = how.querySelector('[data-how-signal]');
   const wide = matchMedia('(min-width: 1024px)');
   let active = -1;
-  let st = null;
+  let pinned = false;
+  let pinLen = 0;   // how far the board stays pinned, in px
+  let pinW = 0;     // the width pinLen was measured at
   let jacks = [];   // jack centres along the wire, in px
 
   how.classList.add('is-live');
@@ -90,63 +94,53 @@ export function initHow({ gsap, loadScrollTrigger, lenis }) {
   }
 
   /* ---------- Desktop pin / mobile tabs ---------- */
-  // Returns a promise on desktop: ScrollTrigger loads on demand.
+  // The board sticks when its top reaches 24 px under the nav bar (never higher
+  // than 120 px from the top), so the nav never covers it and the heading above
+  // has already scrolled past. Only the board pins; the space after it (the
+  // .how__pin wrapper's ::after) holds the buttons back while it does.
+  const nav = document.querySelector('[data-nav]');
+  const wrap = how.querySelector('[data-how-pin]');
+  let top = 120;    // where the board sticks, px from the top of the viewport
+  // Where the pin starts and ends, in page pixels (read by scripts/check-how.mjs).
+  const range = () => {
+    const start = Math.round(wrap.getBoundingClientRect().top + scrollY - top);
+    return [start, start + pinLen];
+  };
+  window.__howPin = () => (pinned ? range() : null);
+  function setPin() {
+    // A phone or tablet's toolbar changes the height while scrolling: only a
+    // new width measures the pin's length again, so it never jumps.
+    if (!pinLen || innerWidth !== pinW) { pinLen = Math.round(innerHeight * 1.1); pinW = innerWidth; }
+    top = Math.max(120, Math.round((nav?.getBoundingClientRect().bottom || 0) + 24));
+    how.style.setProperty('--how-pin-top', `${top}px`);
+    how.style.setProperty('--how-pin-len', `${pinLen}px`);
+  }
   function build() {
-    st?.kill();
-    st = null;
-    gsap.set(pinBox, { clearProps: 'all' });
+    pinned = wide.matches;
+    how.classList.toggle('is-pinned', pinned);
+    if (pinned) setPin();
     measure();
-    if (wide.matches) return loadScrollTrigger().then((ScrollTrigger) => pin(ScrollTrigger));
+    if (pinned) { follow(); return; }
     signal.style.transform = '';
     moveSignal(Math.max(0, active));
-    return null;
   }
-  // The board pins when its top reaches 24 px under the nav bar (never higher
-  // than 120 px from the top), so the nav never covers it and the heading above
-  // has already scrolled past. Only the board pins; pinSpacing pushes what follows.
-  const nav = document.querySelector('[data-nav]');
-  const pinTop = () => Math.max(120, Math.round((nav?.getBoundingClientRect().bottom || 0) + 24));
-  function pin(ScrollTrigger) {
-    if (!wide.matches || st) return;
-    st = ScrollTrigger.create({
-      trigger: pinBox,
-      start: () => `top ${pinTop()}px`,
-      end: () => `+=${Math.round(innerHeight * 1.1)}`,
-      pin: true,
-      pinSpacing: true,
-      anticipatePin: 1,
-      invalidateOnRefresh: true,
-      onRefresh: () => { measure(); },
-      onUpdate: (self) => scrub(self.progress),
-    });
-    scrub(st.progress);
-    // The pin made the page taller: let smooth scrolling know at once.
-    lenis?.resize?.();
-    watchLayout(ScrollTrigger);
+  function follow() {
+    if (!pinned) return;
+    const p = (top - wrap.getBoundingClientRect().top) / Math.max(1, pinLen);
+    scrub(Math.min(1, Math.max(0, p)));
   }
-  // Anything above that changes height after the pin is measured (a "What's
-  // included" opened, fonts, the hero) would leave the pin starting at the old
-  // place, and the heading would scroll over the pinned board. Measure again.
-  let watching = false;
-  function watchLayout(ScrollTrigger) {
-    if (watching) return;
-    watching = true;
-    let last = document.body.scrollHeight, timer = 0;
-    new ResizeObserver(() => {
-      const h = document.body.scrollHeight;
-      if (Math.abs(h - last) < 2) return;
-      last = h;
-      clearTimeout(timer);
-      timer = setTimeout(() => { ScrollTrigger.refresh(); lenis?.resize?.(); last = document.body.scrollHeight; }, 120);
-    }).observe(document.body);
-  }
+  onScroll(follow);
+  // The board's own size changes (a step's paragraph, fonts): the jacks move.
+  new ResizeObserver(() => { measure(); follow(); }).observe(board);
+  lenis?.resize?.();
 
   tabs.forEach((tab, i) => {
     tab.addEventListener('click', (e) => {
       e.preventDefault();
-      if (wide.matches && st) {
+      if (pinned) {
         // Early in step i's part, where the signal rests on its jack.
-        const y = st.start + (st.end - st.start) * Math.min(1, (i + 0.25) / SPAN);
+        const [start, end] = range();
+        const y = start + (end - start) * Math.min(1, (i + 0.25) / SPAN);
         if (lenis) lenis.scrollTo(y, { duration: 0.9, easing: (t) => 1 - (1 - t) ** 4 }); else scrollTo({ top: y, behavior: 'smooth' });
       } else {
         setActive(i);
@@ -178,8 +172,9 @@ export function initHow({ gsap, loadScrollTrigger, lenis }) {
   }));
 
   setActive(0, { animate: false });
-  const ready = build();
-  wide.addEventListener('change', () => { const p = build(); if (!p) window.ScrollTrigger?.refresh(); });
-  addEventListener('resize', () => { if (!wide.matches) { measure(); moveSignal(active); } });
-  return ready;
+  build();
+  wide.addEventListener('change', build);
+  addEventListener('resize', () => {
+    if (pinned) { setPin(); follow(); } else { measure(); moveSignal(active); }
+  });
 }

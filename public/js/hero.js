@@ -1,11 +1,6 @@
-// Hero: the entrance, the exit on scroll, and the cable loader.
+// Hero: the exit on scroll and the cable loader. The entrance runs in CSS
+// (base.css) from first paint, so the copy never waits for scripts.
 import { onScroll } from './scroll.js';
-
-// Entrance: the copy rises in CSS (base.css), so it never waits for scripts;
-// with the intro it waits for the split. The cord drops in under its own physics.
-export function heroEntrance({ cable, ready }) {
-  ready.then(() => cable.enter());
-}
 
 // Exit: from the hero's top at the top of the viewport until its bottom
 // reaches 20% of it, the cord lifts up and out; the copy fades 1.8x faster.
@@ -61,25 +56,22 @@ function cordBlocked() {
   return '';
 }
 
-// First visit (with the intro): the still image of the cord shows from the
-// intro's split; the live cord loads once the intro is over, the visitor has
-// moved, touched, scrolled or pressed a key (or 5 s have passed), and the page
-// is idle (requestIdleCallback, 1.5 s at most). It starts at rest and fades in
-// over the still, so nothing jumps. Its first shader compile is the heaviest
-// task on the page (~0.6 s on a software GPU), so it never lands in the first
-// seconds of a load.
-// Repeat visit (no intro): the live cord loads when the page is idle and the
-// hero is on screen, and drops in; the still waits hidden unless it fails.
-// Returns a small handle so the entrance and the exit can steer the cord.
-export function startCable({ split = null, done = null } = {}) {
+// The still image of the cord is on screen from first paint, at its final size
+// (width and height in the HTML), and stays there unless the live cord takes
+// over. The live cord loads once the page has loaded, the visitor has moved the
+// pointer, touched or pressed a key (or 5 s have passed), the hero is on screen
+// with no scroll for 300 ms, and the main thread is idle. Its first shader
+// compile is the heaviest work on the page (~0.6 s on a software GPU), so it
+// never lands in the first seconds of a load or in the middle of a scroll.
+// It starts at rest, in the still's exact pose, and fades in over it.
+// Returns a small handle so the exit and the Plug-in button can steer the cord.
+export function startCable() {
   const hero = document.querySelector('[data-hero]');
   const wide = matchMedia('(min-width: 1024px)');
   const still = hero.querySelector('.hero__still');
   const report = new URLSearchParams(location.search).has('fps');
-  const state = { enter: 1, exit: 0, entering: false, live: null, off: false };
-  const showStill = () => { if (!state.live) hero.classList.add('show-still'); };
-  if (!document.documentElement.classList.contains('cable-wait')) hero.classList.add('show-still');
-  const push = () => state.live?.setLift(Math.max(state.enter, state.exit));
+  const state = { exit: 0, live: null, off: false };
+  const push = () => state.live?.setLift(state.exit);
   const note = (text) => {
     if (!report) return;
     let el = hero.querySelector('.cable-note');
@@ -91,14 +83,12 @@ export function startCable({ split = null, done = null } = {}) {
   if (blocked || !supportsWebGL() || !('Worker' in window)) {
     state.off = true;
     note(`still image: ${blocked || 'no WebGL'}`);
-    showStill();
     return handle();
   }
-  const fallback = setTimeout(showStill, 4000);
   let token = 0;
 
   // Fall back (for OFF_DAYS) if 3 seconds average under 24 fps, measured after the
-  // first second, which holds the shader compile and the entrance.
+  // first second, which holds the shader compile and the fade.
   function watchFrames() {
     let frames = 0;
     const t0 = performance.now() + 1000;
@@ -113,8 +103,6 @@ export function startCable({ split = null, done = null } = {}) {
       state.live.destroy();
       state.live = null;
       state.off = true;
-      hero.classList.remove('is-live');
-      showStill();
     };
     requestAnimationFrame(tick);
   }
@@ -125,33 +113,23 @@ export function startCable({ split = null, done = null } = {}) {
     state.live = null;
     try {
       const { createCable } = await import('./cable/cable.js');
-      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: Math.max(state.enter, state.exit) });
+      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: state.exit });
       if (mine !== token) { next.destroy(); return; }
       state.live = next;
-      clearTimeout(fallback);
-      hero.classList.remove('show-still');
+      still.style.transform = '';
       push();
-      if (state.entering) dropIn();
       watchFrames();
     } catch (err) {
       console.warn('[cable] WebGL cable unavailable; the still image stays.', err);
-      showStill();
     }
-  }
-
-  // The cord falls from above its rest pose and settles (about 3 s).
-  function dropIn() {
-    if (!state.live || !window.gsap || state.enter === 0) return;
-    window.gsap.to(state, { enter: 0, duration: 3, delay: 0.2, ease: 'power2.inOut', onUpdate: push });
   }
 
   function handle() {
     return {
-      enter() { state.entering = true; dropIn(); },
       exit(v) {
         state.exit = v;
         push();
-        // The still (no WebGL) leaves the same way.
+        // The still leaves the same way while it shows.
         if (!state.live) still.style.transform = v ? `translateY(${-v * 70}%)` : '';
       },
       // The Plug-in button: swing the plug to its socket (or let go), brighten its lamp.
@@ -162,27 +140,27 @@ export function startCable({ split = null, done = null } = {}) {
     };
   }
 
-  if (done) {
-    split.then(() => hero.classList.add('show-still'));
-    const idle = () => new Promise((res) => ('requestIdleCallback' in window ? requestIdleCallback(res, { timeout: 1500 }) : setTimeout(res, 1500)));
-    const stirred = () => new Promise((res) => {
-      const evs = ['pointermove', 'pointerdown', 'touchstart', 'wheel', 'scroll', 'keydown'];
-      const go = () => { evs.forEach((t) => removeEventListener(t, go, true)); clearTimeout(timer); res(); };
-      evs.forEach((t) => addEventListener(t, go, { capture: true, passive: true, once: true }));
-      const timer = setTimeout(go, 5000);
-    });
-    done.then(stirred).then(idle).then(() => { state.enter = 0; mount(); });
-  } else {
-    // Otherwise: once the page is idle and the hero is on screen.
-    const idle = () => new Promise((res) => ('requestIdleCallback' in window ? requestIdleCallback(res, { timeout: 1200 }) : setTimeout(res, 300)));
-    const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise((res) => addEventListener('load', res, { once: true }));
-    const onScreen = new Promise((res) => {
-      const io = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) { io.disconnect(); res(); } });
-      io.observe(hero);
-    });
-    Promise.all([loaded, onScreen]).then(idle).then(mount);
-  }
-  wide.addEventListener('change', () => { if (state.off) return; state.enter = 0; mount(); });
-  still.decode?.().catch(() => {});
+  const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise((res) => addEventListener('load', res, { once: true }));
+  // Scrolling does not count as a stir: the compile would land mid-scroll.
+  const stirred = () => new Promise((res) => {
+    const evs = ['pointermove', 'pointerdown', 'touchstart', 'keydown'];
+    const go = () => { evs.forEach((t) => removeEventListener(t, go, true)); clearTimeout(timer); res(); };
+    evs.forEach((t) => addEventListener(t, go, { capture: true, passive: true }));
+    const timer = setTimeout(go, 5000);
+  });
+  // The hero is on screen and the page has not scrolled for 300 ms.
+  const still300 = () => new Promise((res) => {
+    let seen = false, timer = 0;
+    const check = () => {
+      clearTimeout(timer);
+      if (seen) timer = setTimeout(() => { io.disconnect(); removeEventListener('scroll', check); res(); }, 300);
+    };
+    const io = new IntersectionObserver((entries) => { seen = entries.some((e) => e.isIntersecting); check(); });
+    io.observe(hero);
+    addEventListener('scroll', check, { passive: true });
+  });
+  const idle = () => new Promise((res) => ('requestIdleCallback' in window ? requestIdleCallback(res, { timeout: 1500 }) : setTimeout(res, 300)));
+  loaded.then(stirred).then(still300).then(idle).then(mount);
+  wide.addEventListener('change', () => { if (!state.off) mount(); });
   return handle();
 }

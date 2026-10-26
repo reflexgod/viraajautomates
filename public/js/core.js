@@ -15,27 +15,46 @@ function bezier(x1, y1, x2, y2) {
 }
 export const house = bezier(0.22, 1, 0.36, 1);
 
-// ScrollTrigger is only needed for the desktop pin, so it loads on demand
-// (evaluating it at start-up forced a full-page layout on every phone).
-let stLoad = null;
-export function loadScrollTrigger() {
-  if (!stLoad) {
-    stLoad = new Promise((done, fail) => {
-      if (window.ScrollTrigger) { done(); return; }
-      const s = document.createElement('script');
-      s.src = new URL('./vendor/ScrollTrigger.min.js', import.meta.url).href;
-      s.onload = done;
-      s.onerror = fail;
-      document.head.appendChild(s);
-    }).then(() => {
-      const { gsap, ScrollTrigger } = window;
-      gsap.registerPlugin(ScrollTrigger);
-      // Pinned sections must not jump when a phone's address bar moves.
-      ScrollTrigger.config({ ignoreMobileResize: true });
-      return ScrollTrigger;
-    });
-  }
-  return stLoad;
+// Phones and tablets scroll natively (their own momentum, nothing on the main
+// thread); smooth scrolling is for wheels and trackpads only.
+const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+// Back and forward: the page comes back where it was left. Most browsers keep
+// the page in memory (back/forward cache) and nothing is needed. Otherwise the
+// browser restores the scroll itself; the position saved on leaving is applied
+// again after the page has set itself up, in case anything above it changed height.
+const SCROLL_KEY = `va-scroll:${location.pathname}`;
+addEventListener('pagehide', () => { try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(scrollY))); } catch (e) { /* storage blocked */ } });
+export function savedScroll() {
+  const nav = performance.getEntriesByType?.('navigation')[0];
+  if (nav?.type !== 'back_forward') return null;
+  try { const y = sessionStorage.getItem(SCROLL_KEY); return y === null ? null : Number(y); } catch (e) { return null; }
+}
+export function restoreScroll(lenis) {
+  const y = savedScroll();
+  if (y === null) return;
+  const go = () => requestAnimationFrame(() => {
+    if (Math.abs(scrollY - y) < 2) return;
+    if (lenis) lenis.scrollTo(y, { immediate: true, force: true }); else scrollTo(0, y);
+  });
+  if (document.readyState === 'complete') go(); else addEventListener('load', go, { once: true });
+}
+
+// Pages open at once: where the browser has speculation rules (in each page's
+// head), it prerenders the case study on hover. Elsewhere, hovering or touching
+// a link to another page of the site fetches that page into the cache.
+export function prefetchOnHover() {
+  if (HTMLScriptElement.supports?.('speculationrules')) return;
+  const done = new Set([location.pathname]);
+  const go = (e) => {
+    const a = e.target.closest?.('a[href]');
+    if (!a || a.origin !== location.origin || a.hash && a.pathname === location.pathname || done.has(a.pathname)) return;
+    done.add(a.pathname);
+    fetch(a.href, { credentials: 'same-origin', priority: 'low' }).catch(() => done.delete(a.pathname));
+  };
+  addEventListener('pointerover', go, { passive: true });
+  addEventListener('touchstart', go, { passive: true });
+  addEventListener('focusin', go);
 }
 
 export function setupMotion({ offset = 0 } = {}) {
@@ -45,11 +64,12 @@ export function setupMotion({ offset = 0 } = {}) {
   if (motion) {
     gsap.registerEase('house', house);
     gsap.defaults({ ease: 'house' });
-    if (Lenis) {
+    if (Lenis && !touch) {
       lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 0.95 });
-      lenis.on('scroll', () => window.ScrollTrigger?.update());
       gsap.ticker.add((t) => lenis.raf(t * 1000));
       gsap.ticker.lagSmoothing(0);
+      // Back from the in-memory cache: the page height may have changed meanwhile.
+      addEventListener('pageshow', (e) => { if (e.persisted) lenis.resize(); });
     }
   }
 
@@ -60,7 +80,7 @@ export function setupMotion({ offset = 0 } = {}) {
   const before = [];
   function goTo(target, opts = {}) {
     if (!target) return;
-    // A hook may return a promise (the pin loads ScrollTrigger first).
+    // A hook may return a promise.
     const waits = before.splice(0).map((fn) => fn()).filter(Boolean);
     if (waits.length) { Promise.all(waits).then(() => glide(target, opts), () => glide(target, opts)); return; }
     glide(target, opts);

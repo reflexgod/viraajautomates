@@ -16,11 +16,10 @@
 //   show it (0.6 s); the second tap connects and goes.
 //   Reduced motion, or no JS: a plain link with an arrow; the chat shows, in
 //   full and without movement, on keyboard focus only.
-import { SITE } from './config.js';
+import { mumbai } from './clock.js';
 
 const GO_MS = 450;
 const TYPE_MS = 700;
-const clock = new Intl.DateTimeFormat('en-GB', { timeZone: SITE.timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 // The house easing, cubic-bezier(.22, 1, .36, 1), is close to a quintic ease-out.
 const ease = (t) => 1 - Math.pow(1 - t, 5);
 
@@ -28,7 +27,7 @@ export function initPlugins({ cable = null, lenis = null } = {}) {
   const plugins = [...document.querySelectorAll('[data-plugin]')];
   if (!plugins.length) return;
   // The chat shows the time in Mumbai now (with reduced motion too).
-  const stamp = () => { const t = clock.format(new Date()); document.querySelectorAll('[data-chat-time]').forEach((el) => { el.textContent = t; }); };
+  const stamp = () => { const t = mumbai().time; document.querySelectorAll('[data-chat-time]').forEach((el) => { el.textContent = t; }); };
   stamp();
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;

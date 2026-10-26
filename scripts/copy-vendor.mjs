@@ -1,6 +1,6 @@
 // Copies the font files and browser libraries the live site needs from
 // node_modules into public/, and builds a small Three.js bundle.
-// Run with: npm run vendor
+// Run with: npm run vendor, then npm run subset-fonts (the fonts ship cut down to the site's characters)
 import { copyFileSync, mkdirSync, statSync } from 'node:fs';
 import { build } from 'esbuild';
 
@@ -13,7 +13,6 @@ const copies = [
   ['@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2', 'public/fonts/dm-mono-latin-500.woff2'],
   // Motion libraries
   ['gsap/dist/gsap.min.js', 'public/js/vendor/gsap.min.js'],
-  ['gsap/dist/ScrollTrigger.min.js', 'public/js/vendor/ScrollTrigger.min.js'],
   ['lenis/dist/lenis.min.js', 'public/js/vendor/lenis.min.js'],
 ];
 

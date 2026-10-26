@@ -32,11 +32,11 @@
 
   <link rel="preload" href="../../fonts/faculty-glyphic-latin-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="../../fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="../../css/tokens.css">
-  <link rel="stylesheet" href="../../css/base.css">
-  <link rel="stylesheet" href="../../css/components.css">
-  <link rel="stylesheet" href="../../css/sections.css">
-  <link rel="stylesheet" href="../../css/case.css">
+  <link rel="stylesheet" href="../../css/site.css">
+  <!-- Hovering a link home fetches it ahead, so it opens at once (Chromium; others prefetch on hover in core.js) -->
+  <script type="speculationrules">
+  { "prefetch": [{ "where": { "href_matches": "/" }, "eagerness": "moderate" }] }
+  </script>
 
   <script>
     document.documentElement.classList.add('js');
@@ -401,8 +401,32 @@
 <div class="cursor" aria-hidden="true" data-cursor-root><span class="cursor__ring" data-cursor-ring><span class="cursor__label" data-cursor-label></span></span><span class="cursor__dot" data-cursor-dot></span></div>
 <div class="grain" aria-hidden="true"></div>
 
-<script src="../../js/vendor/gsap.min.js" defer></script>
-<script src="../../js/vendor/lenis.min.js" defer></script>
-<script type="module" src="../../js/case.js"></script>
+<!-- The scripts load once the page has painted (on the home page, once the
+     hero's cord picture is decoded), so nothing they fetch or run stands between
+     the visitor and the first view. Lenis (smooth wheel scrolling) only loads
+     for a mouse or trackpad; touch devices scroll natively. -->
+<script>
+  (function () {
+    var base = '../../js/', still = document.querySelector('.hero__still');
+    function add(src, module) {
+      var s = document.createElement('script');
+      s.src = base + src;
+      if (module) s.type = 'module'; else s.async = false;
+      document.head.appendChild(s);
+      return s;
+    }
+    function go() {
+      if (go.done) return;
+      go.done = true;
+      var libs = [add('vendor/gsap.min.js')];
+      if (!matchMedia('(hover: none) and (pointer: coarse)').matches) libs.push(add('vendor/lenis.min.js'));
+      window.__vaLibs = Promise.all(libs.map(function (s) { return new Promise(function (done) { s.onload = s.onerror = done; }); }));
+      add('case.js', true);
+    }
+    function next() { requestAnimationFrame(function () { setTimeout(go, 0); }); }
+    (still && still.decode ? still.decode() : Promise.resolve()).then(next, next);
+    setTimeout(go, 2500);
+  })();
+</script>
 </body>
 </html>

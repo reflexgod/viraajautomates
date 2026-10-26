@@ -9,6 +9,7 @@ import { checkHow } from './check-how.mjs';
 import { checkOverlap } from './check-overlap.mjs';
 import { checkCable } from './check-cable.mjs';
 import { checkCursor } from './check-cursor.mjs';
+import { checkSpeed } from './check-speed.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -104,11 +105,7 @@ report('No negative reassurance words ("spam", "never share", "no hidden", "no c
 report('No source tags like "(hero)" in any WhatsApp text', !/text=[^"]*%20\((?:hero|footer|nav|menu|services|how|free|case|404)/.test(copy));
 
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader'] });
-const fresh = async (opts = {}, seen = true) => {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...opts });
-  if (seen) await ctx.addInitScript(() => { try { sessionStorage.setItem('va-intro', '1'); } catch (e) {} });
-  return ctx;
-};
+const fresh = (opts = {}) => browser.newContext({ viewport: { width: 1440, height: 900 }, ...opts });
 
 // ---------- Footer, images, links ----------
 {
@@ -201,41 +198,10 @@ await checkScroll({ browser, fresh, report, base: BASE });
 // ---------- How it works never overlaps (scripts/check-how.mjs) ----------
 await checkHow({ browser, base: BASE, report });
 
-// ---------- Intro ----------
-{
-  const ctx = await fresh({}, false);
-  const page = await ctx.newPage();
-  const t0 = Date.now();
-  await page.goto(BASE + '/', { waitUntil: 'commit' });
-  const present = await page.waitForSelector('[data-intro]', { state: 'attached', timeout: 4000 }).then(() => true, () => false);
-  await page.waitForSelector('[data-intro]', { state: 'detached', timeout: 6000 });
-  const ms = Date.now() - t0;
-  report('Intro shows on the first visit and is gone within 2.5 s of starting', present && ms > 1500 && ms < 3300, `removed ${ms} ms after navigation (includes page load and the ≤400 ms font wait)`);
-  await page.goto(BASE + '/', { waitUntil: 'load' });
-  const again = await page.evaluate(() => !!document.querySelector('[data-intro]'));
-  report('Intro does not show again in the same session', !again);
-  await ctx.close();
-  for (const [name, act] of [['click', (p) => p.mouse.click(700, 450)], ['scroll', (p) => p.mouse.wheel(0, 200)], ['key', (p) => p.keyboard.press('ArrowDown')]]) {
-    const c = await fresh({}, false);
-    const p = await c.newPage();
-    await p.goto(BASE + '/', { waitUntil: 'commit' });
-    await p.waitForSelector('[data-intro]', { timeout: 4000 });
-    await p.waitForTimeout(450);
-    const t = Date.now();
-    await act(p);
-    await p.waitForSelector('[data-intro]', { state: 'detached', timeout: 3000 }).catch(() => {});
-    const gone = await p.evaluate(() => !document.querySelector('[data-intro]'));
-    report(`Intro skips on ${name}`, gone && Date.now() - t < 600, `${Date.now() - t} ms`);
-    await c.close();
-  }
-  const r = await fresh({ reducedMotion: 'reduce' }, false);
-  const rp = await r.newPage();
-  await rp.goto(BASE + '/', { waitUntil: 'load' });
-  report('Intro is absent with reduced motion', !(await rp.evaluate(() => !!document.querySelector('[data-intro]') || document.documentElement.classList.contains('intro-on'))));
-  await r.close();
-}
+// ---------- Speed and seamless: hero from first paint, fonts, page changes, back button, pin, scrolling (scripts/check-speed.mjs) ----------
+await checkSpeed({ browser, base: BASE, report });
 
-// ---------- Hero on a repeat visit: H1 visible within 1 s ----------
+// ---------- Hero: H1 visible within 1 s ----------
 {
   const ctx = await fresh({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
