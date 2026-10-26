@@ -1,40 +1,68 @@
 // The hero cable's resting shape, in frame units.
-// The frame is anchored to the hero's right and bottom edges and scaled to
-// the hero's height, so the cable bleeds off the right and bottom.
+// The frame is scaled to the hero (wide: by its height, or 64% of its width;
+// tall: to fit it) and placed so its `socket` point lands on the centre of the
+// hero button's socket. At rest the plug's tip is in the socket, so the cord
+// is plugged in on every screen size: the still images and the live cord
+// share this shape and this placement (placeFrame below, and the copy of it
+// in index.html that places the still before first paint).
 // Shared by the physics worker, the WebGL cable and the still-image script.
 //
 // Points are [x, y, z] with y pointing DOWN and z towards the viewer.
-// The path enters top-right, curls once (the curl crosses in front of
-// itself), runs off the bottom edge and comes back up to the plug.
+// The path enters top-right (far enough out to start off screen on any
+// layout), curls once (the curl crosses in front of itself) and comes back
+// to the plug, which lies along plugDir (from its back towards its tip).
+
+const PLUG_LENGTH = 228;   // the plug model's length at plug scale 1 (cable.js)
+
+function plugged(frame) {
+  const len = PLUG_LENGTH * frame.plug;
+  const [sx, sy] = frame.socket, [dx, dy] = frame.plugDir;
+  frame.path.push([sx - dx * len, sy - dy * len, 0]);   // the plug's back: the cord's end
+  return frame;
+}
 
 export const FRAMES = {
-  wide: {
-    w: 900, h: 900,
+  // 768 px and wider: the copy sits top left; the curl is to the right of the
+  // button, level with it, and the cord sweeps under the curl and comes into
+  // the plug from the right, lying level.
+  wide: plugged({
+    w: 900, h: 900,      // scale reference
     radius: 25,          // cable radius: a cord, not a rope
     plug: 0.95,          // plug scale
+    socket: [384, 400],
+    plugDir: [-1, 0],
+    seat: 1,             // points behind the plug held along it at rest
+    // The still image's region (scripts/make-cable-still.mjs).
+    still: { x0: 330, y0: -260, x1: 1720, y1: 980 },
     path: [
-      [1050, -220, 0], [935, 0, 0], [805, 170, 14], [692, 300, 36],
-      [604, 432, 48],
-      [500, 562, 36], [380, 582, 14], [268, 500, -10], [248, 368, -30],
-      [318, 250, -44], [450, 208, -50], [572, 258, -48], [634, 380, -36],
-      [612, 522, -16],
-      [598, 648, 6], [578, 772, 14], [520, 878, 22], [430, 906, 28],
-      [345, 878, 32],
+      [1705, -440, 0], [1590, -220, 0], [1475, 0, 0], [1345, 170, 14], [1232, 300, 36],
+      [1144, 432, 48],
+      [1040, 562, 36], [920, 582, 14], [808, 500, -10], [788, 368, -30],
+      [858, 250, -44], [990, 208, -50], [1112, 258, -48], [1174, 380, -36],
+      [1152, 522, -16],
+      [1138, 640, 6], [1090, 712, 12], [990, 742, 16], [880, 725, 16], [800, 668, 10],
+      [748, 590, 4], [716, 505, 0], [690, 438, 0], [650, 402, 0],
     ],
-  },
-  tall: {
+  }),
+  // Phones: the copy sits at the bottom and the hero button spans it, so its
+  // socket is 52 px in from the right edge on every phone. The curl is at the
+  // top right, the cord runs down the right edge and the plug dips into the
+  // socket from above.
+  tall: plugged({
     w: 390, h: 844,
     radius: 12,
     plug: 0.46,
+    socket: [429.6, 757.6],
+    plugDir: [-0.259, 0.966],
+    seat: 2,
+    still: { x0: 200, y0: -40, x1: 620, y1: 900 },
     path: [
-      [440, -80, 0], [380, 20, 0], [330, 92, 8], [296, 150, 18],
-      [262, 206, 22], [214, 234, 14], [162, 222, 4], [138, 178, -8],
-      [156, 130, -16], [204, 108, -20], [252, 124, -20], [276, 166, -14],
-      [274, 224, -6],
-      [300, 300, 4], [340, 380, 8], [372, 470, 10], [386, 560, 10],
-      [384, 650, 12], [374, 744, 16],
+      [597, -178, 0], [545, -80, 0], [486, 20, 0], [436, 92, 8], [402, 150, 18],
+      [367, 206, 22], [319, 234, 14], [268, 222, 4], [244, 178, -8], [262, 130, -16],
+      [310, 108, -20], [357, 125, -20], [381, 167, -14], [380, 224, -6],
+      [408, 300, 4], [445, 380, 8], [468, 470, 10], [475, 540, 10], [473, 587, 8],
     ],
-  },
+  }),
   // The plug end hanging into the top of the footer (rendered once, as a still).
   drop: {
     w: 240, h: 520,
@@ -48,3 +76,38 @@ export const FRAMES = {
 };
 
 export const SEGMENTS = 55;          // physics points = SEGMENTS + 1
+
+// Wide from 768 px: the hero copy moves to the top left there.
+export const WIDE_QUERY = '(min-width: 768px)';
+
+// The socket's centre in the hero, in px, without the transforms the
+// entrance, the scroll exit or a hover put on the copy. When the socket is
+// hidden (reduced motion shows an arrow instead), where it would be: 28 px in
+// from the button's right edge, halfway down.
+export function socketIn(hero) {
+  const btn = hero.querySelector('.plugin__btn');
+  const sock = hero.querySelector('.plugin__socket');
+  if (!btn) return null;
+  const h = hero.getBoundingClientRect();
+  let x, y;
+  if (sock && sock.offsetParent) {
+    const r = sock.getBoundingClientRect();
+    x = r.left + r.width / 2; y = r.top + r.height / 2;
+  } else {
+    const r = btn.getBoundingClientRect();
+    x = r.right - 28; y = r.top + r.height / 2;
+  }
+  for (let el = (sock && sock.offsetParent) ? sock : btn; el && el !== hero; el = el.parentElement) {
+    const t = getComputedStyle(el).transform;
+    if (t && t !== 'none') { const m = new DOMMatrixReadOnly(t); x -= m.m41; y -= m.m42; }
+  }
+  return { x: x - h.left, y: y - h.top };
+}
+
+// Scale and offset (px) of the frame in a hero of w × h px whose socket is at
+// sock: frame point (fx, fy) is drawn at (ox + fx * s, oy + fy * s).
+export function placeFrame(name, w, h, sock) {
+  const F = FRAMES[name];
+  const s = name === 'wide' ? Math.min(h / F.h, (w * 0.64) / F.w) : Math.min(w / F.w, h / F.h);
+  return { s, ox: sock.x - F.socket[0] * s, oy: sock.y - F.socket[1] * s };
+}

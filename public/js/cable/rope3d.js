@@ -6,8 +6,9 @@
 // gives it the stiffness of a heavy braided cord, and a soft spring draws
 // every point back towards where it rests, so the composition holds while
 // the cable sways, gives way to the pointer and can be pulled.
-// Point 0 is fixed off screen; the last point is the plug, resting near
-// the bottom.
+// Point 0 is fixed off screen; the last point is the plug's back, resting
+// with the plug in the button's socket: the cord just behind it lies along
+// the plug (frame.plugDir), so the plug points into the socket.
 
 import { SEGMENTS } from './layout.js';
 
@@ -85,7 +86,9 @@ export function createSim(frame) {
     plugAnim: null,      // { from, t, dur } while the plug returns home
     held: -1,            // index of the point being held, or -1
     hold: [0, 0],
-    level: 0,            // 0..1: the plug's end lies level, pointing left (the Plug-in button)
+    dir: frame.plugDir || null,
+    seat: frame.seat ?? 2,
+    seated: 1,           // 0..1: the cord behind the plug lies along it (1 at rest, 0 while the plug is held)
     pointer: { x: 0, y: 0, active: false },
     pushRadius: PHYS.pushRadius,
     lift: 0,          // 0 = at rest, 1 = hanging LIFT above it (entrance and exit)
@@ -122,6 +125,7 @@ function stepOnce(sim) {
     a.t = Math.min(a.t + dt, a.dur);
     const e = houseEase(a.t / a.dur);
     for (let k = 0; k < 3; k++) sim.plug[k] = a.from[k] + (sim.plugHome[k] - a.from[k]) * e;
+    sim.seated = e;
     if (a.t >= a.dur) sim.plugAnim = null;
   }
 
@@ -153,13 +157,16 @@ function stepOnce(sim) {
     const l = last * 3;
     if (sim.held === last) { p[l] = sim.hold[0]; p[l + 1] = sim.hold[1]; }
     else { p[l] = sim.plug[0]; p[l + 1] = sim.plug[1] - up; p[l + 2] = sim.plug[2]; }
-    // Level: the three points behind the plug lie in a line to its right, so the
-    // plug points left, into a socket. Blended in by sim.level.
-    if (sim.held === last && sim.level > 0) {
-      for (let j = 1; j <= 3; j++) {
+    // Seated: the points just behind the plug (frame.seat) lie along it, so it points into the socket.
+    const seat = sim.held === last ? 0 : sim.seated;
+    if (sim.dir && seat > 0) {
+      let along = 0;
+      for (let j = 1; j <= sim.seat; j++) {
         const a = (last - j) * 3;
-        p[a] += (sim.hold[0] + sim.rest1[last - j] * j - p[a]) * sim.level;
-        p[a + 1] += (sim.hold[1] - p[a + 1]) * sim.level;
+        along += sim.rest1[last - j];
+        p[a] += (p[l] - sim.dir[0] * along - p[a]) * seat;
+        p[a + 1] += (p[l + 1] - sim.dir[1] * along - p[a + 1]) * seat;
+        p[a + 2] += (p[l + 2] - p[a + 2]) * seat;
       }
     }
     if (sim.held > 0 && sim.held < last) {
@@ -168,7 +175,7 @@ function stepOnce(sim) {
     }
   };
   // Pinned points have zero weight in the constraints.
-  const w = (i) => (i === 0 || i === last || i === sim.held || (sim.level >= 1 && sim.held === last && i >= last - 3) ? 0 : 1);
+  const w = (i) => (i === 0 || i === last || i === sim.held || (sim.dir && sim.seated >= 1 && sim.held !== last && i >= last - sim.seat) ? 0 : 1);
 
   for (let pass = 0; pass < passes; pass++) {
     pin();
@@ -189,15 +196,15 @@ export function settle(sim, seconds = 3) {
 }
 
 // Hold the cable at point i and pull it to (x, y).
-export function grab(sim, i, x, y, level = 0) {
+export function grab(sim, i, x, y) {
   sim.held = i;
-  sim.level = level;
+  if (i === N - 1) sim.seated = 0;
   sim.hold[0] = x;
   sim.hold[1] = y;
   sim.plugAnim = null;
 }
 
-// Let go. A held plug glides back to where it rests.
+// Let go. A held plug glides back into its socket.
 export function release(sim, dur = 0.6) {
   const last = N - 1;
   if (sim.held === last) {
@@ -206,5 +213,4 @@ export function release(sim, dur = 0.6) {
     sim.plugAnim = { from: sim.plug.slice(), t: 0, dur };
   }
   sim.held = -1;
-  sim.level = 0;
 }

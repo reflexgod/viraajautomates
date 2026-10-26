@@ -10,7 +10,7 @@ import {
   HemisphereLight, DirectionalLight, CanvasTexture, Color, Vector2, Vector3, Matrix4,
   RepeatWrapping, SRGBColorSpace, NeutralToneMapping, VSMShadowMap, DoubleSide,
 } from '../vendor/three.hero.js';
-import { FRAMES } from './layout.js';
+import { FRAMES, socketIn, placeFrame } from './layout.js';
 import { N } from './rope3d.js';
 
 const WALL_Z = -90;          // the wall the cord hangs in front of
@@ -21,7 +21,8 @@ const PUSH_PX = 160;         // the pointer pushes the cord within 160 px
 const REACH_PX = 96;
 const DRAG_PX = 320;         // a held point can be pulled up to 320 px from where it was taken
 const LIFT = 1.25;           // entrance/exit: how far above its rest pose the cord hangs, in frame heights
-const LONG_PRESS_MS = 260;   // touch: hold this long to take hold of the cord
+const LONG_PRESS_MS = 260;
+const PLUGGED_PX = 4;        // the plug counts as in its socket when its tip is this close to the socket's centre   // touch: hold this long to take hold of the cord
 const STRANDS = 18;          // braid carriers around the cord, each direction
 const TILE_ALONG = 9;        // strands crossing one texture tile lengthways
 
@@ -40,7 +41,7 @@ const cr = (p0, p1, p2, p3, t) =>
 // Two sets of strands spiral round the cord in opposite directions and pass
 // over and under each other. All strands are cream, each a slightly
 // different shade, so the cord reads as one fine, tight braid.
-function braidTextures(size) {
+async function braidTextures(size) {
   const W = size / 2, H = size; // W along the cord, H around it
   const colour = document.createElement('canvas');
   const height = document.createElement('canvas');
@@ -53,6 +54,7 @@ function braidTextures(size) {
   const tint = (lane) => 1 + 0.06 * (((Math.sin((((lane % 6) + 6) % 6) * 12.9898) * 43758.5453) % 1 + 1) % 1 - 0.5);
 
   for (let y = 0; y < H; y++) {
+    if (y && y % 8 === 0) await pause();   // in short tasks: a phone's main thread is never held long
     for (let x = 0; x < W; x++) {
       const s = x / W, t = y / H;
       const A = s * TILE_ALONG + t * STRANDS, B = s * TILE_ALONG - t * STRANDS;
@@ -88,7 +90,9 @@ function braidTextures(size) {
 // still: { x0, y0, x1, y1 } renders that region of the frame once, for the
 // fallback image (scripts/make-cable-still.mjs). No input, no loop.
 // onLost: called once if the WebGL context is lost (the page may try again).
-export async function createCable(hero, { frame: name, tier, still = null, lift = 0, onLost = null }) {
+// onPlug(plugged): called when the plug goes into or comes out of the button's
+// socket, measured on each frame: its tip within PLUGGED_PX of the socket's centre.
+export async function createCable(hero, { frame: name, tier, still = null, lift = 0, onLost = null, onPlug = null }) {
   const F = FRAMES[name];
   const R = F.radius;
   const canvas = hero.querySelector('[data-cable-canvas]');
@@ -125,11 +129,11 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
 
   const scene = new Scene();
   // World units are frame units; world y is up, so y = -frameY.
-  // The canvas covers the whole hero; the frame sits at its right edge
-  // (and bottom edge on wide screens), scaled to fit.
+  // The canvas covers the whole hero; the frame is scaled to it and placed so
+  // the plug's tip is on the button's socket (layout.js).
   const camera = new OrthographicCamera(0, F.w, 0, -F.h, -2000, 2000);
   camera.position.z = 1000;
-  const view = { s: 1, ox: 0, oy: 0 };
+  const view = { s: 1, ox: 0, oy: 0, sock: null };
 
   function layout() {
     const w = hero.clientWidth, h = hero.clientHeight;
@@ -139,10 +143,9 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
       renderer.setSize(w, h, false);
       return;
     }
-    const s = name === 'wide' ? Math.min(h / F.h, (w * 0.64) / F.w) : Math.min(w / F.w, h / F.h);
-    const ox = w - F.w * s;
-    const oy = name === 'wide' ? h - F.h * s : 0;
-    Object.assign(view, { s, ox, oy });
+    const sock = socketIn(hero) || { x: w - 52, y: h - 96 };
+    const { s, ox, oy } = placeFrame(name, w, h, sock);
+    Object.assign(view, { s, ox, oy, sock });
     worker.postMessage({ type: 'scale', pushRadius: PUSH_PX / s, lift: LIFT * F.h });
     camera.left = -ox / s;
     camera.right = (w - ox) / s;
@@ -186,7 +189,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   }
 
   /* ---------- Materials ---------- */
-  const tex = braidTextures(tier.name === 'high' ? 512 : 256);
+  const tex = await braidTextures(tier.name === 'high' ? 512 : 256);
   const tileLen = (2 * Math.PI * R * TILE_ALONG) / STRANDS; // keeps strands at 45 degrees
   const colourMap = new CanvasTexture(tex.colour);
   colourMap.colorSpace = SRGBColorSpace;
@@ -346,8 +349,10 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   const m4 = new Matrix4(), X = new Vector3(), Y = new Vector3(), Zp = new Vector3();
   const plugSpan = { x: 0, y: 0, dx: 0, dy: 0 }; // cord end and direction to the tip, frame units
   function placePlug(now) {
-    const e = (SAMPLES - 1) * 3, b = (SAMPLES - 7) * 3;
-    Y.set(S[b] - S[e], S[b + 1] - S[e + 1], S[b + 2] - S[e + 2]).normalize(); // tip -> cord
+    // Along the cord's last segment: at rest it lies along the socket's axis
+    // (rope3d.js seats it), so the tip is exactly in the socket.
+    const e = (SAMPLES - 1) * 3, l = (N - 1) * 3, b = (N - 2) * 3;
+    Y.set(pos[b] - pos[l], pos[l + 1] - pos[b + 1], pos[b + 2] - pos[l + 2]).normalize(); // tip -> cord
     X.crossVectors(Y, Z).normalize();
     Zp.crossVectors(X, Y);                                                    // faces the viewer
     const ox = S[e] - Y.x * PLUG_LEN, oy = S[e + 1] - Y.y * PLUG_LEN, oz = S[e + 2] - Y.z * PLUG_LEN;
@@ -355,7 +360,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     Object.assign(plugSpan, { x: S[e], y: -S[e + 1], dx: -Y.x, dy: Y.y });
     plug.matrix.copy(m4);
     plug.matrixWorldNeedsUpdate = true;
-    // The light breathes slowly, like a line waiting; reaching for a socket, it brightens.
+    // The light breathes slowly, like a line waiting; while the Plug-in button is hovered, it brightens.
     glowNow += (glowTarget - glowNow) * 0.12;
     const breath = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(now / 1000 * Math.PI));
     haloMat.uniforms.uOpacity.value = breath + (1.6 - breath) * glowNow;
@@ -384,61 +389,32 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     ribbon.geometry.attributes.position.needsUpdate = true;
   }
 
-  /* ---------- Reaching for a socket (the hero's Plug-in button) ---------- */
-  // The page asks the plug to swing to a point on screen: the cord's end is
-  // held and its target eases there (0.6 s, or 0.25 s for the final snap).
-  // The plug lies level and points left, so its tip arrives at the socket from
-  // the right; before the snap it waits APPROACH px short of it.
+  /* ---------- The lamp: brightens while the Plug-in button is hovered or tapped ---------- */
   let glowNow = 0, glowTarget = 0;
-  const APPROACH = 34;
-  const reaching = { on: false, t0: 0, dur: 600, from: null, at: null, sock: null, snap: false };
-  const easeIn = (t) => 1 - (1 - t) ** 3;
-  const easeSnap = (t) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t));   // expo.out
-  function reachGoal() {
-    const s = toFrame({ clientX: reaching.sock.x, clientY: reaching.sock.y });
-    return { x: s.x + PLUG_LEN + (reaching.snap ? 0 : APPROACH / view.s), y: s.y };
-  }
-  function stepReach(now) {
-    if (!reaching.on) return;
-    const t = Math.min(1, (now - reaching.t0) / reaching.dur);
-    const g = reachGoal(), e = (reaching.snap ? easeSnap : easeIn)(t);
-    reaching.at = { x: reaching.from.x + (g.x - reaching.from.x) * e, y: reaching.from.y + (g.y - reaching.from.y) * e };
-    worker.postMessage({ type: 'grab', i: N - 1, x: reaching.at.x, y: reaching.at.y, level: reaching.snap ? 1 : e });
-  }
-  // sock: { x, y } in client px, or null to let go (the cord swings back on its own).
-  function reach(sock, { snap = false } = {}) {
-    if (held >= 0) return;
-    if (!sock) {
-      if (reaching.on) worker.postMessage({ type: 'release' });
-      reaching.on = false;
-      glowTarget = 0;
-      return;
-    }
-    const from = reaching.on && reaching.at ? reaching.at : { x: plugSpan.x, y: plugSpan.y };
-    Object.assign(reaching, { on: true, t0: performance.now(), dur: snap ? 250 : 600, from, sock, snap });
-    glowTarget = 1;
-    if (!running) draw(performance.now());
-  }
-  // A short brighten of the lamp (a tap on a phone).
-  function glow(v = 1) { glowTarget = v; }
-  // Is the plug on screen (and the cord drawn live)?
-  // The plug's end on screen (scripts/check-cable.mjs presses it there).
-  const plugPoint = () => {
+  function glow(v = 1) { glowTarget = v; if (ready && !running) draw(performance.now()); }
+  // The plug's back (the cord's end) and its tip, on screen. Test hooks:
+  // scripts/check-cable.mjs presses the plug, check-plug.mjs measures the tip.
+  const plugPoint = (along = 0) => {
     const r = hero.getBoundingClientRect();
-    return { x: r.left + view.ox + plugSpan.x * view.s, y: r.top + view.oy + plugSpan.y * view.s };
+    const x = plugSpan.x + plugSpan.dx * along, y = plugSpan.y + plugSpan.dy * along;
+    return { x: r.left + view.ox + x * view.s, y: r.top + view.oy + y * view.s };
   };
-  if (!still) hero.cordPlug = plugPoint;
-  function plugInView() {
-    if (!running) return false;
-    const { x, y } = plugPoint();
-    return x > 0 && x < innerWidth && y > 0 && y < innerHeight;
+  if (!still) { hero.cordPlug = () => plugPoint(); hero.cordTip = () => plugPoint(PLUG_LEN); }
+
+  // In the socket or not, from where the plug's tip really is.
+  let plugged = null;
+  function checkPlugged() {
+    if (!onPlug || !view.sock) return;
+    const tx = view.ox + (plugSpan.x + plugSpan.dx * PLUG_LEN) * view.s, ty = view.oy + (plugSpan.y + plugSpan.dy * PLUG_LEN) * view.s;
+    const now = Math.hypot(tx - view.sock.x, ty - view.sock.y) <= PLUGGED_PX;
+    if (now !== plugged) { plugged = now; onPlug(now); }
   }
 
   function draw(now) {
-    stepReach(now);
     sample();
     buildCord();
     placePlug(now);
+    checkPlugged();
     if (ribbon) buildRibbon();
     renderer.render(scene, camera);
   }
@@ -555,7 +531,10 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   }
 
   /* ---------- Loop; pause when off screen ---------- */
-  let raf = 0, running = false, visible = false;
+  // ready: set up and its shaders compiled. Nothing draws before that: an early
+  // draw (the observers below fire at once) would compile every shader in one
+  // long task (~0.9 s on a throttled phone profile).
+  let raf = 0, running = false, visible = false, destroyed = false, ready = false;
   let fpsEl = null, frames = 0, fpsT = performance.now();
   if (new URLSearchParams(location.search).has('fps')) {
     fpsEl = document.createElement('div');
@@ -573,6 +552,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   }
 
   function update() {
+    if (!ready) return;
     const should = visible && !document.hidden;
     if (should === running) return;
     running = should;
@@ -581,18 +561,39 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   }
 
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; update(); });
-  const ro = new ResizeObserver(() => { layout(); if (!running) draw(performance.now()); });
+  // Placed again whenever the hero or the socket may have moved: a resize, a
+  // turn of the phone, the iOS URL bar collapsing (visualViewport), the fonts.
+  const relayout = () => { if (destroyed) return; layout(); if (ready && !running) draw(performance.now()); };
+  const ro = new ResizeObserver(relayout);
   if (!still) {
     io.observe(hero);
     document.addEventListener('visibilitychange', update);
     ro.observe(hero);
+    addEventListener('resize', relayout);
+    addEventListener('orientationchange', relayout);
+    visualViewport?.addEventListener('resize', relayout);
+    document.fonts?.ready.then(relayout);
   }
 
-  // Warm up the shaders one mesh per task: render the real scene with only that
-  // mesh shown (the canvas is still transparent), so each program compiles and
-  // links in its own short task instead of all at once in the first frame.
+  // Compile the shaders before the first frame. Where the browser compiles
+  // them in the background (KHR_parallel_shader_compile, most browsers),
+  // compileAsync hands them over and waits without holding the main thread:
+  // the cord's shader alone took 1.3 s of main thread on a throttled phone
+  // profile. Elsewhere, one mesh per task: render the real scene with only that
+  // mesh shown (the canvas is still transparent), so each program compiles in
+  // its own short task instead of all at once in the first frame.
+  let compiled = false;
+  if (renderer.extensions.has('KHR_parallel_shader_compile')) {
+    try {
+      // One material per task: building a program's source is main-thread work too.
+      const seen = new Set(), list = [];
+      scene.traverse((o) => { if (o.isMesh && !seen.has(o.material)) { seen.add(o.material); list.push(o); } });
+      for (const o of list) { await pause(); await renderer.compileAsync(o, camera, scene); }
+      compiled = true;
+    } catch (err) { /* compiled below */ }
+  }
   const meshes = [];
-  scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
+  if (!compiled) scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
   const shown = meshes.map((m) => m.visible);
   const seenMats = new Set();
   for (const m of meshes) {
@@ -605,9 +606,10 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   meshes.forEach((o, i) => { o.visible = shown[i]; });
   await pause();
   draw(performance.now());
+  ready = true;
+  update();
   hero.classList.add('is-live');
 
-  let destroyed = false;
   function destroy() {
     if (destroyed) return;
     cancelAnimationFrame(raf);
@@ -625,10 +627,14 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     hero.removeEventListener('pointerleave', onLeave);
     hero.removeEventListener('touchmove', onTouchMove);
     hero.removeEventListener('contextmenu', onContext);
+    removeEventListener('resize', relayout);
+    removeEventListener('orientationchange', relayout);
+    visualViewport?.removeEventListener('resize', relayout);
     hero.classList.remove('is-live', 'is-holding', 'is-over-cable');
     // No GRAB / PULL label over the still image.
     delete hero.dataset.cursor;
     delete hero.cordPlug;
+    delete hero.cordTip;
     destroyed = true;
     fpsEl?.remove();
     scene.traverse((o) => {
@@ -646,5 +652,5 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
 
   // Running: drawn and answering the pointer (false once destroyed).
   const alive = () => !destroyed;
-  return { destroy, canvas, view, setLift, reach, glow, plugInView, alive };
+  return { destroy, canvas, view, setLift, glow, alive };
 }

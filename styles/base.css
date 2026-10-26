@@ -197,9 +197,12 @@ html.lenis, html.lenis body { height: auto; }
     animation: hero-fade .7s cubic-bezier(.215, .61, .355, 1) backwards;
     animation-delay: calc(.08s + var(--i, 0) * .06s);
   }
+  /* The button only fades: the cord's plug rests in its socket from first paint. */
+  .hero .plugin[data-hero-fade] { animation-name: hero-show; }
 }
 @keyframes hero-rise { from { transform: translateY(110%); } }
 @keyframes hero-fade { from { opacity: 0; transform: translateY(12px); } }
+@keyframes hero-show { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .grain { animation: none; }
   *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }

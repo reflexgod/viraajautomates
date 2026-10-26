@@ -1,6 +1,7 @@
 // Hero: the exit on scroll and the cable loader. The entrance runs in CSS
 // (base.css) from first paint, so the copy never waits for scripts.
 import { onScroll } from './scroll.js';
+import { WIDE_QUERY } from './cable/layout.js';
 
 // Exit: from the hero's top at the top of the viewport until its bottom
 // reaches 20% of it, the cord lifts up and out; the copy fades 1.8x faster.
@@ -14,9 +15,11 @@ export function heroExit({ cable }) {
     const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight * 0.2)));
     if (p === last) return;
     last = p;
-    cable.exit(smooth(0.05, 0.95, p));
-    // While the Plug-in chat is open (a phone scrolls it into view), the copy stays put.
-    const o = hero.querySelector('.plugin.is-open') ? 1 : 1 - Math.min(1, p * 1.8);
+    // While the Plug-in chat is open (a phone scrolls it into view), the copy
+    // stays put and the plug stays in its socket.
+    const open = !!hero.querySelector('.plugin.is-open');
+    cable.exit(open ? 0 : smooth(0.05, 0.95, p));
+    const o = open ? 1 : 1 - Math.min(1, p * 1.8);
     copy.forEach((el) => { el.style.opacity = o; el.style.transform = o < 1 ? `translateY(${-40 * (1 - o)}px)` : ''; });
   };
   onScroll(update);
@@ -56,22 +59,31 @@ function cordBlocked() {
   return '';
 }
 
-// The still image of the cord is on screen from first paint, at its final size
-// (width and height in the HTML), and stays there unless the live cord takes
-// over. The live cord loads at once when the pointer enters the hero or presses
-// on it; otherwise once the page has loaded, the visitor has moved the
-// pointer, touched or pressed a key (or 5 s have passed), the hero is on screen
-// with no scroll for 300 ms, and the main thread is idle. Its first shader
-// compile is the heaviest work on the page (~0.6 s on a software GPU), so it
-// never lands in the first seconds of a load or in the middle of a scroll.
-// It starts at rest, in the still's exact pose, and fades in over it.
+// The still image of the cord is on screen from first paint, placed with its
+// plug in the button's socket (the script after the hero in index.html), and
+// stays there unless the live cord takes over. On touch screens the live cord
+// loads once the page has loaded and the main thread is idle (1.5 s at most).
+// With a mouse it loads at once when the pointer enters the hero or presses on
+// it; otherwise once the page has loaded, the visitor has moved the pointer or
+// pressed a key (or 5 s have passed), the hero is on screen with no scroll for
+// 300 ms, and the main thread is idle. Its first shader compile is the
+// heaviest work on the page (~0.6 s on a software GPU), split into short tasks.
+// It starts at rest, in the still's exact pose and place, and fades in over it.
 // Returns a small handle so the exit and the Plug-in button can steer the cord.
 export function startCable() {
   const hero = document.querySelector('[data-hero]');
-  const wide = matchMedia('(min-width: 1024px)');
+  const wide = matchMedia(WIDE_QUERY);
+  const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
   const still = hero.querySelector('.hero__still');
   const report = new URLSearchParams(location.search).has('fps');
   const state = { exit: 0, live: null, off: false };
+  // The button's "plugged" state (a glow on its socket) follows the plug: the
+  // still is in the socket while the hero is at rest; the live cord reports
+  // where its tip really is (pulled out, or lifted on scroll, it is not).
+  const btn = hero.querySelector('[data-plugin-3d]');
+  const plugged = (v) => { if (btn && btn.dataset.plugged !== String(v)) { btn.dataset.plugged = v; btn.classList.toggle('is-plugged', v); } };
+  const stillPlugged = () => plugged(state.exit === 0);
+  stillPlugged();
   const push = () => state.live?.setLift(state.exit);
   const note = (text) => {
     if (!report) return;
@@ -104,6 +116,7 @@ export function startCable() {
       state.live.destroy();
       state.live = null;
       state.off = true;
+      stillPlugged();
     };
     requestAnimationFrame(tick);
   }
@@ -114,6 +127,7 @@ export function startCable() {
   let used = false;
   const failed = (why) => {
     state.live = null;
+    stillPlugged();
     if (tries < 2) { setTimeout(mount, 400); return; }
     state.off = true;
     note(`still image: ${why}`);
@@ -124,13 +138,14 @@ export function startCable() {
     tries++;
     state.live?.destroy();
     state.live = null;
+    stillPlugged();
     // A canvas that has held a context (lost, or torn down) is replaced by a
     // fresh one: a lost context cannot be reused.
     if (used) { const old = hero.querySelector('[data-cable-canvas]'); old.replaceWith(old.cloneNode(false)); }
     used = true;
     try {
       const { createCable } = await import('./cable/cable.js');
-      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: state.exit, onLost: () => { if (state.live === next) failed('WebGL context lost'); } });
+      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: state.exit, onLost: () => { if (state.live === next) failed('WebGL context lost'); }, onPlug: (v) => { if (mine === token) plugged(v); } });
       if (mine !== token) { next.destroy(); return; }
       state.live = next;
       still.style.transform = '';
@@ -160,12 +175,9 @@ export function startCable() {
         state.exit = v;
         push();
         // The still leaves the same way while it shows.
-        if (!state.live) still.style.transform = v ? `translateY(${-v * 70}%)` : '';
+        if (!state.live) { still.style.transform = v ? `translateY(${-v * 70}%)` : ''; stillPlugged(); }
       },
-      // The Plug-in button: swing the plug to its socket (or let go), brighten its lamp.
-      // live() is false until the cord is drawn live and its plug is on screen.
-      live: () => !!state.live && state.exit === 0 && state.live.plugInView(),
-      reach: (sock, opts) => state.live?.reach(sock, opts),
+      // The Plug-in button: brighten the plug's lamp (the live cord only).
       glow: (v) => state.live?.glow(v),
     };
   }
@@ -194,8 +206,10 @@ export function startCable() {
   // already over the hero when this runs counts too.)
   ['pointerenter', 'pointerdown', 'touchstart'].forEach((t) => hero.addEventListener(t, start, { passive: true, once: true }));
   if (hero.matches(':hover')) start();
-  // Otherwise once the page has settled.
-  loaded.then(stirred).then(still300).then(idle).then(start);
+  // Otherwise once the page has settled; on a touch screen (no pointer to
+  // wait for) as soon as the main thread is idle after load.
+  if (touch) loaded.then(idle).then(start);
+  else loaded.then(stirred).then(still300).then(idle).then(start);
   wide.addEventListener('change', () => { if (!state.off) { tries = 0; mount(); } });
   return handle();
 }

@@ -52,7 +52,7 @@ onmessage = ({ data: m }) => {
       sim.lift = m.v;
       break;
     case 'grab':
-      grab(sim, m.i, m.x, m.y, m.level || 0);
+      grab(sim, m.i, m.x, m.y);
       break;
     case 'release':
       release(sim);

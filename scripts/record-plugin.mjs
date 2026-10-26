@@ -1,7 +1,7 @@
 // Records the Plug-in button at 1440 (hover, leave, hover, click) and 375 (tap,
 // tap) as real-time video, turns it into GIFs, and asserts what happens: the
-// chat and the plug on hover (the 3D cord in the hero when it is live), the
-// way back on leave, "Connected ✓" and WhatsApp about 450 ms after the click,
+// chat on hover (the hero cord's plug stays in its socket, its lamp brightens), the
+// way back on leave, the ticks turning blue and WhatsApp about 450 ms after the click,
 // in the same tab; on a phone the first tap only shows, the second goes.
 // Frames come from the browser's screencast (as they are painted), with their times.
 //   node scripts/record-plugin.mjs [folder]   (needs npm run serve, ffmpeg on PATH)
@@ -59,7 +59,7 @@ for (const w of [1440, 375]) {
     await page.waitForTimeout(1000);
     const cls = await page.locator('.hero [data-plugin]').getAttribute('class');
     await page.screenshot({ path: `${out}/${w}-hover.png` });
-    ok(`${w}: hover opens the chat below and brings the plug (${/is-cord/.test(cls) ? '3D cord' : '2D plug'})`, /is-open/.test(cls) && (!live || /is-cord/.test(cls)) && !!since(h1, 'is-open'), `live ${live}, ${cls}`);
+    ok(`${w}: hover opens the chat below (the cord's plug stays in the socket)`, /is-open/.test(cls) && !!since(h1, 'is-open'), `live ${live}, ${cls}`);
     await page.mouse.move(c.x, c.y - 220, { steps: 6 });
     await page.waitForTimeout(900);
     ok(`${w}: leaving lets it go`, !/is-open/.test(await page.locator('.hero [data-plugin]').getAttribute('class')));
@@ -85,8 +85,8 @@ for (const w of [1440, 375]) {
     await page.touchscreen.tap(nb.x + nb.width / 2, nb.y + nb.height / 2);
     navMs = await nav;
   }
-  const conn = since(clickAt, 'is-connected');
-  ok(`${w}: ${m ? 'second tap' : 'click'} connects ("Connected ✓" at once) and opens WhatsApp about 450 ms later, in this tab`, !!conn && conn[0] - clickAt < 150 && navMs >= 430 && navMs < 900 && decodeURIComponent(page.url()).includes(MSG), `connected after ${conn ? conn[0] - clickAt : '–'} ms, WhatsApp after ${navMs} ms`);
+  const conn = since(clickAt, 'is-sent');
+  ok(`${w}: ${m ? 'second tap' : 'click'} sends (blue ticks at once, the text unchanged) and opens WhatsApp about 450 ms later, in this tab`, !!conn && conn[0] - clickAt < 150 && navMs >= 430 && navMs < 900 && decodeURIComponent(page.url()).includes(MSG), `connected after ${conn ? conn[0] - clickAt : '–'} ms, WhatsApp after ${navMs} ms`);
   await page.waitForTimeout(500);
   await cdp.send('Page.stopScreencast').catch(() => {});
   await ctx.close();

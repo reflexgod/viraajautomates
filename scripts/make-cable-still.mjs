@@ -1,15 +1,18 @@
 // Renders the hero cable at rest, from the same WebGL scene the site uses,
 // into still images for first paint, reduced motion and no-WebGL browsers:
-//   public/images/cable-wide.webp   frame region x -200..900, y -250..900
-//   public/images/cable-tall.webp   frame region x 0..390,    y 0..844  (wide and tall also as .avif)
+//   public/images/cable-wide.webp   the region FRAMES.wide.still (js/cable/layout.js)
+//   public/images/cable-tall.webp   the region FRAMES.tall.still  (wide and tall also as .avif)
 //   public/images/cable-drop.webp   the plug end hanging into the footer, x 0..240, y 0..520
+// The page places wide and tall with their socket point on the button's socket
+// (the script after the hero in index.html holds the same regions: keep them in step).
 // Needs the preview server (npm run serve). Run with: npm run still
 import { chromium } from 'playwright-core';
 import sharp from 'sharp';
+import { FRAMES } from '../public/js/cable/layout.js';
 
 const SHOTS = [
-  { name: 'wide', region: { x0: -200, y0: -250, x1: 900, y1: 900 }, scale: 1.25, tier: 'high' },
-  { name: 'tall', region: { x0: 0, y0: 0, x1: 390, y1: 844 }, scale: 2, tier: 'low' },
+  { name: 'wide', region: FRAMES.wide.still, scale: 1.25, tier: 'high' },
+  { name: 'tall', region: FRAMES.tall.still, scale: 2, tier: 'low' },
   { name: 'drop', region: { x0: 0, y0: 0, x1: 240, y1: 520 }, scale: 2, tier: 'low' },
 ];
 const TIERS = {

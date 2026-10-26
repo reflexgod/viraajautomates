@@ -12,6 +12,7 @@ import { checkCursor } from './check-cursor.mjs';
 import { checkSpeed } from './check-speed.mjs';
 import { checkMono } from './check-mono.mjs';
 import { checkPortrait } from './check-portrait.mjs';
+import { checkPlug } from './check-plug.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -296,19 +297,19 @@ await checkPortrait({ browser, base: BASE, report });
     if (!m) { await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 }); await page.waitForTimeout(700); first = await cls(); }
     else { await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await page.waitForTimeout(700); first = await cls(); }
     const look = await btn.evaluate((a) => { const cs = getComputedStyle(a), r = a.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), font: cs.fontFamily.split(',')[0], weight: cs.fontWeight, size: cs.fontSize, radius: cs.borderRadius, socket: getComputedStyle(a.querySelector('.plugin__socket')).display, bubble: getComputedStyle(a.closest('[data-plugin]').querySelector('.plugin__chat')).visibility }; });
-    // The 2D plug waits beside the socket, never over it.
-    const gap = await btn.evaluate((a) => Math.round(a.querySelector('.plugin__plug').getBoundingClientRect().left - a.querySelector('.plugin__socket svg').getBoundingClientRect().right));
+    // One socket only: the 2D plug does not wait beside it (it shows only as it snaps in).
+    const plugShown = await btn.evaluate((a) => +getComputedStyle(a.querySelector('.plugin__plug')).opacity > 0.05);
     const t0 = Date.now();
     const nav = page.waitForURL(/wa\.me/, { timeout: 3000 }).then(() => Date.now() - t0).catch(() => -1);
     if (!m) { await page.mouse.down(); await page.mouse.up(); } else { const nb = await btn.boundingBox(); await page.touchscreen.tap(nb.x + nb.width / 2, nb.y + nb.height / 2); }
-    const connected = await page.waitForFunction((s) => document.querySelector(`${s} [data-plugin]`)?.classList.contains('is-connected'), sel, { timeout: 400 }).then(() => true).catch(() => false);
+    const connected = await page.waitForFunction((s) => document.querySelector(`${s} [data-plugin]`)?.classList.contains('is-sent'), sel, { timeout: 400 }).then(() => true).catch(() => false);
     // Snapped: the plug face sits exactly on the socket, the ticks are blue.
     await page.waitForTimeout(280);
     const snap = await page.evaluate((s) => { const r = document.querySelector(`${s} [data-plugin]`); if (!r) return null; const p = r.querySelector('.plugin__plug').getBoundingClientRect(), k = r.querySelector('.plugin__socket svg').getBoundingClientRect(); return { dx: Math.round(p.left - k.left), dy: Math.round(p.top - k.top), tick: getComputedStyle(r.querySelector('.chat__ticks')).color }; }, sel).catch(() => null);
     const ms = await nav;
     const sent = decodeURIComponent(page.url());
     const fit = !!snap && snap.dx === 0 && snap.dy === 0 && snap.tick === 'rgb(83, 189, 235)';
-    res6.push([`${w} ${sel}`, /is-open/.test(first) && !/is-cord/.test(first) && (!m || /is-armed/.test(first)) && look.bubble === 'visible' && gap >= 6 && fit && connected && ms >= 430 && ms < 1000 && sent.includes(MSG) && look.h >= 56 && look.w === 300 && look.font === 'Inter' && look.weight === '500' && look.size === '18px' && look.radius === '4px' && look.socket !== 'none', `${m ? 'tap' : 'hover'}: ${first.replace('plugin ', '')}; ${look.w}×${look.h} ${look.font} ${look.weight} ${look.size}; plug ${gap} px beside the socket, snapped ${JSON.stringify(snap)}; connected ${connected}; WhatsApp after ${ms} ms`]);
+    res6.push([`${w} ${sel}`, /is-open/.test(first) && !/is-cord/.test(first) && (!m || /is-armed/.test(first)) && look.bubble === 'visible' && !plugShown && fit && connected && ms >= 430 && ms < 1000 && sent.includes(MSG) && look.h >= 56 && look.w === 300 && look.font === 'Inter' && look.weight === '500' && look.size === '18px' && look.radius === '4px' && look.socket !== 'none', `${m ? 'tap' : 'hover'}: ${first.replace('plugin ', '')}; ${look.w}×${look.h} ${look.font} ${look.weight} ${look.size}; 2D plug beside the socket ${plugShown}, snapped ${JSON.stringify(snap)}; connected ${connected}; WhatsApp after ${ms} ms`]);
     await ctx.close();
   }
   // The chat opens below the button, types the message in, covers no text, stays on screen;
@@ -385,6 +386,9 @@ await checkOverlap({ browser, base: BASE, report });
 
 // ---------- The hero cord: mouse and touch, and not switched off for ordinary phones ----------
 await checkCable({ browser, base: BASE, report });
+
+// ---------- The hero cord is plugged into the button's socket (WebKit and Chromium, phones and laptops) ----------
+await checkPlug({ base: BASE, report });
 
 
 // ---------- The cursor: visible on dark and light sections, never over words ----------
