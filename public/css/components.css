@@ -797,7 +797,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  width: min(300px, 100%);
+  width: 300px;
+  max-width: 100%;
   min-height: 56px;
   padding: 0 14px 0 22px;
   border-radius: 4px;
