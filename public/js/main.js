@@ -6,6 +6,7 @@ import { initNav } from './nav.js';
 import { heroExit, startCable } from './hero.js';
 import { initReveals } from './reveal.js';
 import { initPreviews } from './preview.js';
+import { initPortrait } from './portrait.js';
 import { initHow } from './how.js';
 import { initTiles } from './tiles.js';
 import { initPlugins } from './plugin.js';
@@ -22,6 +23,7 @@ const { gsap, lenis, motion, goTo, beforeGoTo } = setupMotion();
 initClock();
 initNav({ gsap, lenis, goTo });
 initPreviews({ gsap, lenis });
+initPortrait();
 initTiles();
 prefetchOnHover();
 

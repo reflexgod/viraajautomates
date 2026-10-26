@@ -58,7 +58,8 @@ function cordBlocked() {
 
 // The still image of the cord is on screen from first paint, at its final size
 // (width and height in the HTML), and stays there unless the live cord takes
-// over. The live cord loads once the page has loaded, the visitor has moved the
+// over. The live cord loads at once when the pointer enters the hero or presses
+// on it; otherwise once the page has loaded, the visitor has moved the
 // pointer, touched or pressed a key (or 5 s have passed), the hero is on screen
 // with no scroll for 300 ms, and the main thread is idle. Its first shader
 // compile is the heaviest work on the page (~0.6 s on a software GPU), so it
@@ -107,22 +108,51 @@ export function startCable() {
     requestAnimationFrame(tick);
   }
 
+  // WebGL failing, or its context lost, gets one more try; after that the
+  // still stays (no GRAB: cable.js only shows it on the live cord).
+  let tries = 0;
+  let used = false;
+  const failed = (why) => {
+    state.live = null;
+    if (tries < 2) { setTimeout(mount, 400); return; }
+    state.off = true;
+    note(`still image: ${why}`);
+  };
   async function mount() {
+    if (state.off) return;
     const mine = ++token;
+    tries++;
     state.live?.destroy();
     state.live = null;
+    // A canvas that has held a context (lost, or torn down) is replaced by a
+    // fresh one: a lost context cannot be reused.
+    if (used) { const old = hero.querySelector('[data-cable-canvas]'); old.replaceWith(old.cloneNode(false)); }
+    used = true;
     try {
       const { createCable } = await import('./cable/cable.js');
-      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: state.exit });
+      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: state.exit, onLost: () => { if (state.live === next) failed('WebGL context lost'); } });
       if (mine !== token) { next.destroy(); return; }
       state.live = next;
       still.style.transform = '';
       push();
       watchFrames();
     } catch (err) {
-      console.warn('[cable] WebGL cable unavailable; the still image stays.', err);
+      console.warn('[cable] WebGL cable unavailable.', err);
+      if (mine === token) failed('WebGL unavailable');
     }
   }
+  // Start the live cord at most once from the triggers below (a width change,
+  // a retry or a restart mounts again on purpose).
+  let started = false;
+  const start = () => { if (started || state.off) return; started = true; mount(); };
+  // Not running when it should be (back from the in-memory cache, or a tab
+  // that comes back): start it again.
+  const revive = () => {
+    if (state.off || document.hidden || !started) return;
+    if (!state.live || !state.live.alive()) { tries = 0; mount(); }
+  };
+  addEventListener('pageshow', (e) => { if (e.persisted) revive(); });
+  document.addEventListener('visibilitychange', revive);
 
   function handle() {
     return {
@@ -160,7 +190,12 @@ export function startCable() {
     addEventListener('scroll', check, { passive: true });
   });
   const idle = () => new Promise((res) => ('requestIdleCallback' in window ? requestIdleCallback(res, { timeout: 1500 }) : setTimeout(res, 300)));
-  loaded.then(stirred).then(still300).then(idle).then(mount);
-  wide.addEventListener('change', () => { if (!state.off) mount(); });
+  // The visitor reaches for the cord: start at once, not on idle. (A pointer
+  // already over the hero when this runs counts too.)
+  ['pointerenter', 'pointerdown', 'touchstart'].forEach((t) => hero.addEventListener(t, start, { passive: true, once: true }));
+  if (hero.matches(':hover')) start();
+  // Otherwise once the page has settled.
+  loaded.then(stirred).then(still300).then(idle).then(start);
+  wide.addEventListener('change', () => { if (!state.off) { tries = 0; mount(); } });
   return handle();
 }

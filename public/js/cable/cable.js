@@ -87,7 +87,8 @@ function braidTextures(size) {
 
 // still: { x0, y0, x1, y1 } renders that region of the frame once, for the
 // fallback image (scripts/make-cable-still.mjs). No input, no loop.
-export async function createCable(hero, { frame: name, tier, still = null, lift = 0 }) {
+// onLost: called once if the WebGL context is lost (the page may try again).
+export async function createCable(hero, { frame: name, tier, still = null, lift = 0, onLost = null }) {
   const F = FRAMES[name];
   const R = F.radius;
   const canvas = hero.querySelector('[data-cable-canvas]');
@@ -421,10 +422,15 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   // A short brighten of the lamp (a tap on a phone).
   function glow(v = 1) { glowTarget = v; }
   // Is the plug on screen (and the cord drawn live)?
+  // The plug's end on screen (scripts/check-cable.mjs presses it there).
+  const plugPoint = () => {
+    const r = hero.getBoundingClientRect();
+    return { x: r.left + view.ox + plugSpan.x * view.s, y: r.top + view.oy + plugSpan.y * view.s };
+  };
+  if (!still) hero.cordPlug = plugPoint;
   function plugInView() {
     if (!running) return false;
-    const r = hero.getBoundingClientRect();
-    const x = r.left + view.ox + plugSpan.x * view.s, y = r.top + view.oy + plugSpan.y * view.s;
+    const { x, y } = plugPoint();
     return x > 0 && x < innerWidth && y > 0 && y < innerHeight;
   }
 
@@ -486,8 +492,11 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     if (onControl(e)) return;
     const p = toFrame(e), h = hit(p, e.pointerType === 'mouse' ? REACH_PX : GRAB_PX);
     if (!h) return;
-    if (e.pointerType === 'touch') {
-      // A long press takes hold, so ordinary swipes still scroll the page.
+    if (e.pointerType === 'touch' && h.i === N - 1) {
+      // The plug (the handle) is taken at once, so dragging it never scrolls the page.
+      take(h, p, e);
+    } else if (e.pointerType === 'touch') {
+      // Elsewhere on the cord a long press takes hold, so ordinary swipes still scroll the page.
       pressAt = { x: e.clientX, y: e.clientY };
       clearTimeout(longPress);
       longPress = setTimeout(() => { longPress = 0; take(h, p, e); navigator.vibrate?.(8); }, LONG_PRESS_MS);
@@ -536,6 +545,10 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     hero.addEventListener('pointermove', onMove);
     hero.addEventListener('pointerup', onUp);
     hero.addEventListener('pointercancel', onUp);
+    // Whatever ends the capture (released outside the window, the tab hidden,
+    // a system gesture) lets go, so a drag can never get stuck.
+    hero.addEventListener('lostpointercapture', onUp);
+    addEventListener('blur', onUp);
     hero.addEventListener('pointerleave', onLeave);
     hero.addEventListener('touchmove', onTouchMove, { passive: false });
     hero.addEventListener('contextmenu', onContext);
@@ -594,7 +607,9 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   draw(performance.now());
   hero.classList.add('is-live');
 
+  let destroyed = false;
   function destroy() {
+    if (destroyed) return;
     cancelAnimationFrame(raf);
     running = false;
     worker.terminate();
@@ -605,10 +620,16 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     hero.removeEventListener('pointermove', onMove);
     hero.removeEventListener('pointerup', onUp);
     hero.removeEventListener('pointercancel', onUp);
+    hero.removeEventListener('lostpointercapture', onUp);
+    removeEventListener('blur', onUp);
     hero.removeEventListener('pointerleave', onLeave);
     hero.removeEventListener('touchmove', onTouchMove);
     hero.removeEventListener('contextmenu', onContext);
     hero.classList.remove('is-live', 'is-holding', 'is-over-cable');
+    // No GRAB / PULL label over the still image.
+    delete hero.dataset.cursor;
+    delete hero.cordPlug;
+    destroyed = true;
     fpsEl?.remove();
     scene.traverse((o) => {
       o.geometry?.dispose();
@@ -619,9 +640,11 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     renderer.dispose();
   }
 
-  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); destroy(); }, { once: true });
+  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); destroy(); onLost?.(); }, { once: true });
 
   function setLift(v) { worker.postMessage({ type: 'lift', v }); }
 
-  return { destroy, canvas, view, setLift, reach, glow, plugInView };
+  // Running: drawn and answering the pointer (false once destroyed).
+  const alive = () => !destroyed;
+  return { destroy, canvas, view, setLift, reach, glow, plugInView, alive };
 }

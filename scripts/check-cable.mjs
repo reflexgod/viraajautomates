@@ -131,6 +131,89 @@ export async function checkCable({ browser, base = 'http://localhost:4173', repo
     report('Hero cord, touch: a 260 ms long-press takes hold and drags it (no page scroll); a quick swipe still scrolls the page', !!res.ok, JSON.stringify(res));
     await ctx.close();
   }
+
+  const liveNow = (page) => page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-live'));
+  const waitLive = (page, on = true) => page.waitForFunction((v) => document.querySelector('[data-hero]').classList.contains('is-live') === v, on, { timeout: 15000 }).then(() => true, () => false);
+
+  // ---------- Lost WebGL context: one retry, then the still with no GRAB ----------
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await page.mouse.move(1000, 450);
+    const lose = () => page.evaluate(() => { const c = document.querySelector('[data-cable-canvas]'); (c.getContext('webgl2') || c.getContext('webgl'))?.getExtension('WEBGL_lose_context')?.loseContext(); });
+    const first = await waitLive(page);
+    await lose();
+    const dropped = await waitLive(page, false);
+    const back = await waitLive(page);
+    await lose();
+    await waitLive(page, false);
+    await page.waitForTimeout(2500);   // time for a retry that must not come
+    let label = null;
+    for (let y = 220; y < 840; y += 60) for (let x = 780; x < 1400; x += 60) { await page.mouse.move(x, y); label = label || await page.getAttribute('[data-hero]', 'data-cursor'); }
+    const res = { first, dropped, back, liveAtEnd: await liveNow(page), label, still: await page.evaluate(() => getComputedStyle(document.querySelector('.hero__still')).opacity) };
+    report('Hero cord: a lost WebGL context is retried once (live again); lost again, the still stays and no GRAB shows', first && dropped && back && !res.liveAtEnd && !label && res.still === '1', JSON.stringify(res));
+    await ctx.close();
+  }
+
+  // ---------- A drag released outside the window lets go ----------
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await page.mouse.move(1000, 450);
+    await waitLive(page);
+    await page.waitForTimeout(1500);
+    let spot = null;
+    for (let y = 300; y < 760 && !spot; y += 30) for (let x = 760; x < 1400 && !spot; x += 30) {
+      await page.mouse.move(x, y);
+      if (await page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-over-cable'))) spot = { x, y };
+    }
+    let res = { spot };
+    if (spot) {
+      await page.mouse.down();
+      const held = await page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-holding'));
+      await page.mouse.move(1640, -100, { steps: 8 });
+      await page.mouse.up();
+      await page.waitForTimeout(300);
+      res = { spot, held, stuck: await page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-holding')) };
+      // And a fresh press still takes hold.
+      await page.mouse.move(spot.x, spot.y, { steps: 4 });
+      await page.waitForTimeout(800);
+      await page.mouse.move(spot.x, spot.y);
+      await page.mouse.down();
+      res.again = await page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-holding'));
+      await page.mouse.up();
+    }
+    report('Hero cord: a drag released outside the window lets go, and the cord can be taken again', !!(res.held && !res.stuck && res.again), JSON.stringify(res));
+    await ctx.close();
+  }
+
+  // ---------- Touch: pressing the plug takes hold at once; dragging it never scrolls ----------
+  {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+    const page = await ctx.newPage();
+    const cdp = await ctx.newCDPSession(page);
+    const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    await page.goto(base + '/', { waitUntil: 'load' });
+    await touch('touchStart', 20, 300); await touch('touchEnd');
+    await waitLive(page);
+    await page.waitForTimeout(2500);
+    const p = await page.evaluate(() => document.querySelector('[data-hero]').cordPlug?.());
+    let res = { plug: p && { x: Math.round(p.x), y: Math.round(p.y) } };
+    if (p && p.y > 0 && p.y < 812) {
+      await touch('touchStart', p.x, p.y);
+      await page.waitForTimeout(60);                      // well under the 260 ms long-press
+      res.held = await page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-holding'));
+      for (let k = 1; k <= 10; k++) { await touch('touchMove', p.x - k * 8, p.y - k * 20); await page.waitForTimeout(16); }
+      res.scrollY = await page.evaluate(() => scrollY);
+      await touch('touchEnd');
+      await page.waitForTimeout(200);
+      res.released = !(await page.evaluate(() => document.querySelector('[data-hero]').classList.contains('is-holding')));
+    }
+    report('Hero cord, touch: pressing the plug takes hold at once and dragging it does not scroll the page', !!(res.held && res.scrollY === 0 && res.released), JSON.stringify(res));
+    await ctx.close();
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

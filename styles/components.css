@@ -275,7 +275,8 @@
 }
 @media (min-width: 768px) {
   .hero { justify-content: flex-start; }
-  .hero__copy { margin-left: calc(var(--edge) + 3.3vw); max-width: min(40rem, 52vw); padding: max(120px, 17svh) 0 104px; }
+  /* The title keeps the place it had under the old "( Mumbai · Pune )" label (37 px), level with the cord's loop */
+  .hero__copy { margin-left: calc(var(--edge) + 3.3vw); max-width: min(40rem, 52vw); padding: calc(max(120px, 17svh) + 37px) 0 104px; }
 }
 .hero__title {
   margin-bottom: 20px;
@@ -286,8 +287,6 @@
   text-wrap: balance;
 }
 .hero__title .line-mask { display: block; white-space: nowrap; }
-/* Optional place label above the name */
-.hero__label { margin-bottom: 20px; color: var(--cream-72); }
 /* The sub-line: the light statement style */
 .hero__sub {
   max-width: 34rem;
@@ -448,26 +447,6 @@
 }
 .pcard__cap b { font-weight: 400; color: var(--ink); }
 .pcard__cap span { flex: none; }
-/* The portrait: full-bleed, no mat or frame, its caption inside over a soft shade */
-.pcard--photo { width: 380px; }
-@media (max-width: 767px) { .pcard--photo { width: 260px; } }
-.pcard--photo .pcard__frame { padding: 0; background: none; border-radius: 2px; box-shadow: 0 24px 46px -24px rgba(40, 18, 12, .55); }
-.pcard--photo .pcard__slot { border-radius: 2px; }
-.pcard--photo .pcard__cap {
-  position: absolute;
-  inset: auto 0 0;
-  z-index: 2;
-  min-height: 0;
-  padding: 48px 16px 16px;
-  border-radius: 0 0 2px 2px;
-  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, .35));
-  font: 500 15px/1.2 var(--font-sans);
-  letter-spacing: 0;
-  text-transform: none;
-  color: #fff;
-}
-.pcard--photo .pcard__cap b { font-weight: 500; color: #fff; }
-.pcard--photo .pcard__cap span:empty { display: none; }
 
 /* "What I fix" card for Local SEO: typography only, no Google UI, logo or stars */
 .fix {

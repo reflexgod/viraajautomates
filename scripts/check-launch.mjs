@@ -11,6 +11,7 @@ import { checkCable } from './check-cable.mjs';
 import { checkCursor } from './check-cursor.mjs';
 import { checkSpeed } from './check-speed.mjs';
 import { checkMono } from './check-mono.mjs';
+import { checkPortrait } from './check-portrait.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -96,8 +97,8 @@ const chats = Object.values(pages6).flatMap((t) => [...t.matchAll(/<div class="p
 report('Each Plug-in button has the mini WhatsApp chat (Viraaj, the message, time and ticks, "Free · on WhatsApp · within one working day", "Tap again to send")', chats.length === 8 && chats.every((c) => c.includes('<b>Viraaj</b><small>usually replies within a day</small>') && c.includes(`data-chat-rest>${PLUG_MSG}<`) && c.includes('data-chat-time') && c.includes('chat__ticks') && c.includes('Free · on WhatsApp · within one working day') && c.includes('Tap again to send')), `${chats.length} chats`);
 const heroCopy = index.slice(index.indexOf('<div class="hero__copy"'), index.indexOf('<div class="hero__strip"'));
 const heroKids = [...heroCopy.matchAll(/\n {6}<(\w+) class="([\w-]+)/g)].map((m) => m[2]).join();
-report('Hero holds only "( Mumbai · Pune )", the H1, the sub-line and the Plug-in button', heroKids === 'hero__label,hero__title,hero__sub,plugin' && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
-  && heroCopy.includes('>Mumbai · Pune<') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.'), heroKids);
+report('Hero holds only the H1, the sub-line and the Plug-in button (no place label); Mumbai and Pune stay in the description and structured data', heroKids === 'hero__title,hero__sub,plugin' && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
+  && !heroCopy.includes('Mumbai · Pune') && /name="description" content="[^"]*Mumbai and Pune/.test(index) && index.includes('"areaServed": ["Mumbai", "Pune"]') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.'), heroKids);
 const checkSec = index.slice(index.indexOf('id="check"'), index.indexOf('</section>', index.indexOf('id="check"')));
 report('Free report: the report teaser (statement and three steps) static, no field; "Unlock my free report"', !/<input|data-compose|data-report/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec) && checkSec.includes('<span class="plugin__text">Unlock my free report</span>'));
 report('No "Get my free check", no boxed arrows, no composer left', !/Get my free check|btn__box|btn--plug|compose__/.test(copy) && !existsSync('public/js/compose.js'));
@@ -231,9 +232,9 @@ await checkMono({ browser, base: BASE, report });
   const page = await ctx.newPage();
   await page.goto(BASE + '/', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
-  await page.evaluate(() => { const el = document.querySelector('[data-preview="viraaj"]'); window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 400); });
+  await page.evaluate(() => { const el = document.querySelector('[data-preview="websites"]'); window.scrollTo(0, el.getBoundingClientRect().top + scrollY - 400); });
   await page.waitForTimeout(1500);
-  const box = await page.$eval('[data-preview="viraaj"] .pw__word', (e) => { const r = e.getBoundingClientRect(); return [r.left + 30, r.top + r.height / 2]; });
+  const box = await page.$eval('[data-preview="websites"] .pw__word', (e) => { const r = e.getBoundingClientRect(); return [r.left + 30, r.top + r.height / 2]; });
   await page.mouse.move(box[0] - 40, box[1] + 80);
   await page.mouse.move(box[0], box[1], { steps: 5 });
   await page.waitForTimeout(800);
@@ -242,9 +243,12 @@ await checkMono({ browser, base: BASE, report });
   await page.waitForTimeout(1600);
   const vis = await page.evaluate(() => getComputedStyle(document.querySelector('[data-pcard]')).visibility === 'visible');
   const under = await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('.pw')?.dataset.preview || null, box);
-  report('Hover card: hover "Viraaj", scroll without moving the mouse: the card hides (or switches) with the page', shown && (under ? vis : !vis), `shown ${shown}, visible after scroll ${vis}, trigger under pointer: ${under}`);
+  report('Hover card: hover a service title, scroll without moving the mouse: the card hides (or switches) with the page', shown && (under ? vis : !vis), `shown ${shown}, visible after scroll ${vis}, trigger under pointer: ${under}`);
   await ctx.close();
 }
+
+// ---------- The About portrait (scripts/check-portrait.mjs) ----------
+await checkPortrait({ browser, base: BASE, report });
 
 // ---------- Service titles open their preview (lightbox), never a new tab ----------
 {
