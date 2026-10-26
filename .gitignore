@@ -15,3 +15,5 @@ scripts/.study/
 docs/screenshots-local/
 # Notes, studies and screenshots stay on this computer only (owner, 26 Oct 2026)
 docs/
+# IDE settings
+.idea/

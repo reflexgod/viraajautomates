@@ -403,9 +403,6 @@
   .hero { justify-content: flex-start; }
   .hero__copy { margin-left: calc(var(--edge) + 3.3vw); max-width: min(40rem, 52vw); padding: max(120px, 17svh) 0 104px; }
 }
-/* Mono labels on plum: at least 12 px at 72% cream */
-.hero__label { margin-bottom: 20px; font-size: 12px; color: var(--cream-72); white-space: nowrap; }
-@media (max-width: 559px) { .hero__label { letter-spacing: .08em; white-space: normal; line-height: 1.6; } }
 .hero__title {
   margin-bottom: 20px;
   font-size: clamp(2rem, 0.9rem + 2.6vw, 3.75rem);
@@ -425,56 +422,6 @@
   letter-spacing: -.02em;
   color: var(--cream);
 }
-
-/* ---------- The free-check composer: a label, one line, a field and a button ---------- */
-.compose { max-width: 34rem; }
-.compose__label { margin-bottom: 8px; font-size: 12px; color: var(--cream-72); }
-.compose__lead { margin-bottom: 14px; font-size: var(--fs-body); line-height: 1.5; color: var(--cream); }
-.compose__row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
-/* Without JavaScript there is nothing to fill in: the button is a plain WhatsApp link. */
-.compose__field { display: none; flex: 1 1 15rem; }
-.js .compose__field { display: block; }
-.compose__field input {
-  width: 100%;
-  min-height: 48px;
-  padding: 10px 0 8px;
-  border: 0;
-  border-bottom: 1px solid var(--cream-30);
-  border-radius: 0;
-  background: transparent;
-  font: 400 var(--fs-lead)/1.3 var(--font-sans);
-  letter-spacing: -.012em;
-  color: var(--cream);
-  transition: border-color var(--dur-micro) var(--ease);
-}
-.compose__field input::placeholder { color: var(--cream-55); opacity: 1; }
-/* Focus: the line turns full cream and thickens to 2 px (no box around a writing line) */
-.compose__field input:focus { outline: none; border-bottom-color: var(--cream); box-shadow: 0 1px 0 0 var(--cream); }
-.compose__btn { flex: none; box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .55); }
-.compose__preview { min-height: 1.45em; margin-top: 12px; font-size: var(--fs-small); line-height: 1.45; color: var(--cream-62); overflow-wrap: anywhere; }
-.compose__preview:empty { display: none; }
-/* 55% cream: 50% measured 4.26:1 on plum, under the 4.5:1 minimum for 13 px text */
-.compose__note { margin-top: 4px; font-size: 13px; line-height: 1.45; color: var(--cream-55); }
-@media (max-width: 559px) {
-  .compose__lead { font-size: var(--fs-small); }
-  .hero__sub { margin-bottom: 24px; }
-  .compose__row { flex-direction: column; align-items: stretch; }
-  .compose__field { flex: none; }
-  .compose__btn { justify-content: center; min-height: 52px; }
-}
-
-.hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; margin-top: 10px; }
-.hero__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  font-size: var(--fs-body);
-  color: var(--cream);
-  background: linear-gradient(var(--cream-36), var(--cream-36)) 0 calc(100% - 10px) / 100% 1px no-repeat;
-}
-.hero__link:hover { background-image: linear-gradient(var(--cream), var(--cream)); }
-.hero__link:focus-visible { outline-color: var(--cream); }
 
 /* The bottom strip: one line, 12 px at 72% cream; phones don't show it */
 .hero__strip {
@@ -839,51 +786,146 @@
 .callcard__line { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 15px; color: var(--ink); }
 .callcard__line svg { flex: none; color: var(--ground); }
 
-/* ---------- "Get my free check": the message it will send, shown before you tap ---------- */
-.wa-anchor { position: relative; display: inline-block; }
-/* Rises above the button, so nothing on the page moves */
-.wa-bubble {
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 12px);
-  z-index: 5;
-  display: grid;
-  gap: 6px;
-  width: max-content;
-  max-width: min(20rem, calc(100vw - 48px));
-  padding: 9px 10px 10px;
-  border-radius: var(--r-card);
-  background: var(--paper);
+/* ---------- The Plug-in button: "Check my business", the one call to action ----------
+   Cream (dark on paper), 56 px tall, a small socket at its right end. Hover or
+   focus: a plug comes to the socket and the message rises above; click: it
+   snaps in, one signal-orange ring, "Connected ✓", then WhatsApp (js/plugin.js). */
+.plugin { position: relative; display: inline-grid; justify-items: start; gap: 12px; }
+.plugin__btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(300px, 100%);
+  min-height: 56px;
+  padding: 0 14px 0 22px;
+  border-radius: 4px;
+  background: var(--cream);
   color: var(--ink);
-  box-shadow: 0 0 0 1px var(--ink-15), var(--shadow-card);
-  text-align: left;
-  white-space: normal;
+  font: 500 1.125rem/1 var(--font-sans);
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, .55);
+  transition: transform var(--dur-ui) var(--ease);
+}
+.plugin__btn:hover { transform: translateY(-2px); }
+.plugin__btn:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+.plugin--dark .plugin__btn { background: var(--graphite); color: var(--cream); box-shadow: 0 14px 30px -20px rgba(40, 18, 12, .6); }
+.plugin--dark .plugin__btn:focus-visible { outline-color: var(--graphite); }
+/* The label rises to "Connected ✓" through a mask (0.3 s) */
+.plugin__label { position: relative; display: inline-grid; overflow: hidden; line-height: 1.3; }
+.plugin__text, .plugin__done { grid-area: 1 / 1; transition: transform .3s var(--ease); }
+.plugin__done { transform: translateY(110%); }
+.is-connected .plugin__text { transform: translateY(-110%); }
+.is-connected .plugin__done { transform: none; }
+
+/* The socket: two dark slots in a circle */
+.plugin__socket {
+  position: relative;
+  flex: none;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--ink-06);
+  box-shadow: inset 0 0 0 1px var(--ink-30);
+}
+.plugin__socket::before, .plugin__socket::after {
+  content: "";
+  position: absolute;
+  top: 9.5px;
+  width: 3px; height: 9px;
+  border-radius: 1.5px;
+  background: var(--ink);
+}
+.plugin__socket::before { left: 8.5px; }
+.plugin__socket::after { right: 8.5px; }
+.plugin--dark .plugin__socket { background: var(--cream-15); box-shadow: inset 0 0 0 1px var(--cream-36); }
+.plugin--dark .plugin__socket::before, .plugin--dark .plugin__socket::after { background: var(--cream); }
+/* The 2D plug (where the 3D cord can't reach): comes from the right, pins first */
+.plugin__plug {
+  position: absolute;
+  z-index: 1;
+  left: 50%; top: 50%;
+  width: 22px; height: 14px;
+  margin: -7px 0 0 -2px;
+  border-radius: 2px 5px 5px 2px;
+  background: var(--ink);
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s linear .45s;
-  visibility: hidden;
+  transform: translateX(26px);
+  transition: transform .6s var(--ease), opacity .3s var(--ease);
   pointer-events: none;
 }
-.wa-anchor.is-open .wa-bubble { opacity: 1; transform: none; visibility: visible; transition: opacity .45s var(--ease), transform .45s var(--ease); }
-.wa-bubble__head { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--ink-62); }
-/* The outgoing message, in WhatsApp's own colours */
-.wa-bubble__msg {
-  position: relative;
-  justify-self: end;
-  padding: 7px 10px 6px;
-  border-radius: 8px 0 8px 8px;
-  background: #D9FDD3;
-  color: #111B21;
-  font-size: 14.5px;
-  line-height: 1.4;
-  letter-spacing: -.005em;
+.plugin__plug::before {
+  content: "";
+  position: absolute;
+  left: -6px; top: 3px;
+  width: 6px; height: 2px;
+  background: var(--ink);
+  box-shadow: 0 6px 0 var(--ink);
 }
-.wa-bubble__msg::after { content: ""; position: absolute; top: 0; right: -6px; border-left: 6px solid #D9FDD3; border-bottom: 8px solid transparent; }
-.wa-bubble__text { overflow-wrap: anywhere; }
-.wa-bubble__tick { margin-left: 6px; font-size: 11px; letter-spacing: -.12em; color: #53BDEB; }
-.wa-bubble__hint { font-size: 12.5px; color: var(--ink-62); }
-[data-dark] .wa-bubble, .hero .wa-bubble, .footer .wa-bubble, .menu .wa-bubble { box-shadow: 0 0 0 1px var(--cream-15), 0 24px 46px -24px rgba(0, 0, 0, .7); }
-.menu .wa-bubble { left: auto; right: 0; }
+.plugin--dark .plugin__plug, .plugin--dark .plugin__plug::before { background: var(--cream); box-shadow: 0 6px 0 var(--cream); }
+.plugin--dark .plugin__plug { box-shadow: none; }
+.is-open:not(.is-cord) .plugin__plug { opacity: 1; transform: translateX(10px); }
+.is-snapped:not(.is-cord) .plugin__plug { opacity: 1; transform: translateX(-2px); transition: transform .25s cubic-bezier(.16, 1, .3, 1), opacity .1s; }
+/* One ring from the socket when it connects (0.5 s) */
+.plugin__ring { position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 2px var(--signal); opacity: 0; pointer-events: none; }
+.is-snapped .plugin__ring { animation: plugin-ring .5s cubic-bezier(.16, 1, .3, 1) .2s both; }
+@keyframes plugin-ring { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(2.6); } }
+/* A touch on a phone: the lamp pulses */
+.is-armed:not(.is-cord) .plugin__socket { animation: plugin-lamp .6s var(--ease); }
+@keyframes plugin-lamp { 40% { box-shadow: inset 0 0 0 1px var(--ink-30), 0 0 0 6px rgb(242 102 43 / .25); } }
+
+/* The message it will send, rising above the button (0.45 s, house easing) */
+.plugin__bubble {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  bottom: calc(100% + 14px);
+  display: grid;
+  gap: 4px;
+  width: max-content;
+  max-width: min(19rem, calc(100vw - 48px));
+  padding: 9px 12px 10px;
+  border-radius: 2px;
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink-09), 0 16px 32px -16px rgba(20, 8, 4, .6);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity .45s var(--ease), transform .45s var(--ease), visibility 0s linear .45s;
+  pointer-events: none;
+}
+.plugin__bubble::after { content: ""; position: absolute; left: 22px; bottom: -4px; width: 9px; height: 9px; background: var(--cream); transform: rotate(45deg); }
+.plugin--dark .plugin__bubble { box-shadow: 0 0 0 1px var(--ink-15), 0 16px 32px -18px rgba(40, 18, 12, .45); }
+.plugin__bubble-label { font: 400 12px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-62); }
+.plugin__bubble-text { font-size: var(--fs-small); line-height: 1.4; }
+/* Wide hero: the message on one line, in the air above the button, clear of the sub-line */
+@media (min-width: 1024px) {
+  .hero .plugin__bubble { max-width: none; white-space: nowrap; }
+  .hero .hero__sub { margin-bottom: 80px; }
+}
+.is-open .plugin__bubble { opacity: 1; visibility: visible; transform: none; transition: opacity .45s var(--ease), transform .45s var(--ease); }
+
+/* One micro line under it; on a phone the first tap's hint takes its place */
+.plugin__micro, .plugin__hint { font-size: 12px; color: var(--cream-72); }
+.plugin--dark .plugin__hint { color: var(--ink-62); }
+.plugin__hint:empty { display: none; }
+.is-armed .plugin__micro { display: none; }
+
+/* No JavaScript, or reduced motion: a plain link with an arrow; the message
+   shows, without movement, on keyboard focus only. */
+.plugin__arrow { display: none; }
+html:not(.js) .plugin__socket { display: none; }
+html:not(.js) .plugin__arrow { display: inline; }
+html:not(.js) .plugin:has(.plugin__btn:focus-visible) .plugin__bubble { opacity: 1; visibility: visible; transform: none; transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .plugin__socket { display: none; }
+  .plugin__arrow { display: inline; }
+  .plugin__bubble { transform: none; transition: none; }
+  .plugin:has(.plugin__btn:focus-visible) .plugin__bubble { opacity: 1; visibility: visible; }
+}
+
 
 /* ==========================================================================
    Cursor: a dot and a ring; a black disc with a word over labelled things

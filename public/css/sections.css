@@ -334,7 +334,7 @@
   .how.is-live .how__text { grid-row: 2; grid-column: 1 / -1; margin-top: 18px; min-height: 3.1em; max-width: none; }
   .how.is-live .how__visual { grid-row: 3; grid-column: 1 / -1; height: var(--stage-h); margin-top: 16px; touch-action: pan-y; }
   .how.is-live .how__visual .phone { height: 31rem; }
-  .how.is-live .how__item:not(.is-active) .how__text { visibility: hidden; opacity: 0; }
+  .how.is-live .how__item:not(.is-active) .how__text { display: none; }
 }
 @media (max-width: 767px) {
   .how.is-live .how__board { --stage-h: 37rem; }
@@ -343,7 +343,8 @@
   .how__visual .phone, .how.is-live .how__visual .phone { height: 25rem; width: 100%; }
 }
 
-@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+/* The live step's description rises into place (one at a time; the others are not laid out) */
+@media (prefers-reduced-motion: no-preference) {
   .how.is-live .how__item.is-active .how__text { animation: how-text .45s var(--ease) both; }
 }
 @keyframes how-text { from { opacity: 0; transform: translateY(6px); } }
@@ -478,14 +479,9 @@
 }
 .check__steps b { font-weight: 400; color: var(--ink-62); margin-right: 4px; }
 @media (max-width: 767px) { .check__steps { flex-direction: column; } }
-.check__action { margin-top: var(--s32); }
-.check__micro { margin-top: 14px; max-width: 34rem; font-size: 13px; color: var(--ink-62); }
-
-/* Desktop: the message sits beside the free-check button, so the steps stay readable */
-@media (min-width: 1024px) {
-  .check__action .wa-bubble { left: calc(100% + 16px); bottom: -6px; transform: translateX(-8px); }
-  .check__action .wa-anchor.is-open .wa-bubble { transform: none; }
-}
+/* Micro mono (62% ink: the floor for 12 px on paper) */
+.check__plugin { margin-top: var(--s32); }
+.check__micro { margin-top: 24px; max-width: 34rem; font: 400 12px/1.6 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-62); }
 
 /* C6: "fixed in writing" gets one pen stroke under it, drawn once (0.9 s) */
 .pen { position: relative; white-space: nowrap; }

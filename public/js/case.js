@@ -14,7 +14,7 @@ import { initClock } from './clock.js';
 import { initNav } from './nav.js';
 import { initReveals } from './reveal.js';
 import { initTiles, playEnquiry } from './tiles.js';
-import { initMessages } from './message.js';
+import { initPlugins } from './plugin.js';
 import { initCursor } from './cursor.js';
 import { whenSeen } from './scroll.js';
 
@@ -25,7 +25,7 @@ const { gsap, lenis, motion, reduced, goTo } = setupMotion({ offset: -130 });
 initClock();
 initNav({ gsap, lenis, goTo });
 initTiles();
-initMessages();
+initPlugins();
 
 /* ---------- Tabs ---------- */
 const tabs = [...document.querySelectorAll('[data-tab]')];

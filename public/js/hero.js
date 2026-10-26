@@ -144,6 +144,11 @@ export function startCable({ split = null, done = null } = {}) {
         // The still (no WebGL) leaves the same way.
         if (!state.live) still.style.transform = v ? `translateY(${-v * 70}%)` : '';
       },
+      // The Plug-in button: swing the plug to its socket (or let go), brighten its lamp.
+      // live() is false until the cord is drawn live and its plug is on screen.
+      live: () => !!state.live && state.exit === 0 && state.live.plugInView(),
+      reach: (sock, opts) => state.live?.reach(sock, opts),
+      glow: (v) => state.live?.glow(v),
     };
   }
 

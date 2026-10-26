@@ -351,8 +351,11 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     Object.assign(plugSpan, { x: S[e], y: -S[e + 1], dx: -Y.x, dy: Y.y });
     plug.matrix.copy(m4);
     plug.matrixWorldNeedsUpdate = true;
-    // The light breathes slowly, like a line waiting.
-    haloMat.uniforms.uOpacity.value = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(now / 1000 * Math.PI));
+    // The light breathes slowly, like a line waiting; reaching for a socket, it brightens.
+    glowNow += (glowTarget - glowNow) * 0.12;
+    const breath = 0.55 + 0.35 * (0.5 + 0.5 * Math.sin(now / 1000 * Math.PI));
+    haloMat.uniforms.uOpacity.value = breath + (1.6 - breath) * glowNow;
+    halo.scale.setScalar(1 + 0.7 * glowNow);
     if (plugShadow) {
       const cx = ox + Y.x * PLUG_LEN / 2, cy = oy + Y.y * PLUG_LEN / 2, d = oz + Y.z * PLUG_LEN / 2 - WALL_Z;
       plugShadow.position.set(cx + d * K.x, cy + d * K.y, WALL_Z + 1);
@@ -377,7 +380,53 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     ribbon.geometry.attributes.position.needsUpdate = true;
   }
 
+  /* ---------- Reaching for a socket (the hero's Plug-in button) ---------- */
+  // The page asks the plug to swing to a point on screen: the cord's end is
+  // held and its target eases there (0.6 s, or 0.25 s for the final snap).
+  // The plug lies level and points left, so its tip arrives at the socket from
+  // the right; before the snap it waits APPROACH px short of it.
+  let glowNow = 0, glowTarget = 0;
+  const APPROACH = 34;
+  const reaching = { on: false, t0: 0, dur: 600, from: null, at: null, sock: null, snap: false };
+  const easeIn = (t) => 1 - (1 - t) ** 3;
+  const easeSnap = (t) => (t >= 1 ? 1 : 1 - 2 ** (-10 * t));   // expo.out
+  function reachGoal() {
+    const s = toFrame({ clientX: reaching.sock.x, clientY: reaching.sock.y });
+    return { x: s.x + PLUG_LEN + (reaching.snap ? 0 : APPROACH / view.s), y: s.y };
+  }
+  function stepReach(now) {
+    if (!reaching.on) return;
+    const t = Math.min(1, (now - reaching.t0) / reaching.dur);
+    const g = reachGoal(), e = (reaching.snap ? easeSnap : easeIn)(t);
+    reaching.at = { x: reaching.from.x + (g.x - reaching.from.x) * e, y: reaching.from.y + (g.y - reaching.from.y) * e };
+    worker.postMessage({ type: 'grab', i: N - 1, x: reaching.at.x, y: reaching.at.y, level: reaching.snap ? 1 : e });
+  }
+  // sock: { x, y } in client px, or null to let go (the cord swings back on its own).
+  function reach(sock, { snap = false } = {}) {
+    if (held >= 0) return;
+    if (!sock) {
+      if (reaching.on) worker.postMessage({ type: 'release' });
+      reaching.on = false;
+      glowTarget = 0;
+      return;
+    }
+    const from = reaching.on && reaching.at ? reaching.at : { x: plugSpan.x, y: plugSpan.y };
+    Object.assign(reaching, { on: true, t0: performance.now(), dur: snap ? 250 : 600, from, sock, snap });
+    glowTarget = 1;
+    if (!running) draw(performance.now());
+  }
+  // A short brighten of the lamp (a tap on a phone).
+  function glow(v = 1) { glowTarget = v; }
+  // Is the plug on screen (and the cord drawn live)?
+  function plugInView() {
+    if (!running) return false;
+    const r = hero.getBoundingClientRect();
+    const x = r.left + view.ox + plugSpan.x * view.s, y = r.top + view.oy + plugSpan.y * view.s;
+    return x > 0 && x < innerWidth && y > 0 && y < innerHeight;
+  }
+
   function draw(now) {
+    stepReach(now);
     sample();
     buildCord();
     placePlug(now);
@@ -570,5 +619,5 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
 
   function setLift(v) { worker.postMessage({ type: 'lift', v }); }
 
-  return { destroy, canvas, view, setLift };
+  return { destroy, canvas, view, setLift, reach, glow, plugInView };
 }

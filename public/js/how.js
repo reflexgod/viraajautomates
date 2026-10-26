@@ -1,6 +1,6 @@
 // "How it works": one enquiry in four steps.
 //
-// From 1024 px the board and the two buttons under it pin for 110% of the
+// From 1024 px the board (steps and stage, not the heading or the buttons) pins for 110% of the
 // viewport. Scroll progress picks the step: steps 01-03 get a third of the
 // pin each and step 04 goes live just before the end, so the pin lets go as
 // soon as the story is told (no empty screen before the buttons). A plum
@@ -101,20 +101,44 @@ export function initHow({ gsap, loadScrollTrigger, lenis }) {
     moveSignal(Math.max(0, active));
     return null;
   }
+  // The board pins when its top reaches 24 px under the nav bar (never higher
+  // than 120 px from the top), so the nav never covers it and the heading above
+  // has already scrolled past. Only the board pins; pinSpacing pushes what follows.
+  const nav = document.querySelector('[data-nav]');
+  const pinTop = () => Math.max(120, Math.round((nav?.getBoundingClientRect().bottom || 0) + 24));
   function pin(ScrollTrigger) {
     if (!wide.matches || st) return;
     st = ScrollTrigger.create({
       trigger: pinBox,
-      start: 'center center',
+      start: () => `top ${pinTop()}px`,
       end: () => `+=${Math.round(innerHeight * 1.1)}`,
       pin: true,
+      pinSpacing: true,
       anticipatePin: 1,
+      invalidateOnRefresh: true,
       onRefresh: () => { measure(); },
       onUpdate: (self) => scrub(self.progress),
     });
     scrub(st.progress);
     // The pin made the page taller: let smooth scrolling know at once.
     lenis?.resize?.();
+    watchLayout(ScrollTrigger);
+  }
+  // Anything above that changes height after the pin is measured (a "What's
+  // included" opened, fonts, the hero) would leave the pin starting at the old
+  // place, and the heading would scroll over the pinned board. Measure again.
+  let watching = false;
+  function watchLayout(ScrollTrigger) {
+    if (watching) return;
+    watching = true;
+    let last = document.body.scrollHeight, timer = 0;
+    new ResizeObserver(() => {
+      const h = document.body.scrollHeight;
+      if (Math.abs(h - last) < 2) return;
+      last = h;
+      clearTimeout(timer);
+      timer = setTimeout(() => { ScrollTrigger.refresh(); lenis?.resize?.(); last = document.body.scrollHeight; }, 120);
+    }).observe(document.body);
   }
 
   tabs.forEach((tab, i) => {

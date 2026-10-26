@@ -55,7 +55,12 @@
   <div class="content">
     <h1 class="t-statement">This page isn't here. Let's get you somewhere useful.</h1>
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px 32px;margin-top:var(--s48)">
-      <a class="btn" href="https://wa.me/919653375679?text=Hi%20Viraaj%2C%20I'd%20like%20the%20free%20check%20(404).%20Business%20name%3A%20" target="_blank" rel="noopener" title="Opens WhatsApp">Check my business <span class="btn__arrow" aria-hidden="true">→</span><span class="sr-only"> (opens WhatsApp)</span></a>
+      <div class="plugin plugin--dark" data-plugin>
+        <span class="plugin__bubble" aria-hidden="true"><span class="plugin__bubble-label">Your message</span><span class="plugin__bubble-text">Hi Viraaj, saw your website. Can you do a free check for my business?</span></span>
+        <a class="plugin__btn" href="https://wa.me/919653375679?text=Hi%20Viraaj%2C%20saw%20your%20website.%20Can%20you%20do%20a%20free%20check%20for%20my%20business%3F" aria-label="Check my business on WhatsApp" aria-describedby="plugin-msg-8"><span class="plugin__label"><span class="plugin__text">Check my business</span><span class="plugin__done" aria-hidden="true">Connected ✓</span></span><span class="plugin__arrow" aria-hidden="true">→</span><span class="plugin__socket" aria-hidden="true"><span class="plugin__plug"></span><span class="plugin__ring"></span></span></a>
+        <span class="sr-only" id="plugin-msg-8">Opens WhatsApp with the message: Hi Viraaj, saw your website. Can you do a free check for my business?</span>
+        <p class="plugin__hint t-tag" data-plugin-hint aria-live="polite"></p>
+      </div>
       <a class="text-link" href="/">Back home</a>
     </div>
   </div>

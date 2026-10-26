@@ -8,8 +8,7 @@ import { initReveals } from './reveal.js';
 import { initPreviews } from './preview.js';
 import { initHow } from './how.js';
 import { initTiles } from './tiles.js';
-import { initMessages } from './message.js';
-import { initCompose } from './compose.js';
+import { initPlugins } from './plugin.js';
 import { initProcess } from './process.js';
 import { initCursor } from './cursor.js';
 import { whenSeen } from './scroll.js';
@@ -33,14 +32,16 @@ initClock();
 initNav({ gsap, lenis, goTo });
 initPreviews({ gsap, lenis });
 initTiles();
-initMessages();
-initCompose();
 
 if (!motion) {
   root.classList.add('reveal-done');
+  // Reduced motion: it stays a plain link; without the animation library: the 2D plug.
+  initPlugins();
 } else {
   root.classList.add('motion');
   const cable = startCable(introOn ? { split: introSplit, done: introDone } : {});
+  // The hero's Plug-in button reaches for the live cord; the others use their 2D plug.
+  initPlugins({ cable });
   heroEntrance({ cable, ready: introSplit });
   heroExit({ cable });
   initCursor({ gsap });

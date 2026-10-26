@@ -85,6 +85,7 @@ export function createSim(frame) {
     plugAnim: null,      // { from, t, dur } while the plug returns home
     held: -1,            // index of the point being held, or -1
     hold: [0, 0],
+    level: 0,            // 0..1: the plug's end lies level, pointing left (the Plug-in button)
     pointer: { x: 0, y: 0, active: false },
     pushRadius: PHYS.pushRadius,
     lift: 0,          // 0 = at rest, 1 = hanging LIFT above it (entrance and exit)
@@ -152,13 +153,22 @@ function stepOnce(sim) {
     const l = last * 3;
     if (sim.held === last) { p[l] = sim.hold[0]; p[l + 1] = sim.hold[1]; }
     else { p[l] = sim.plug[0]; p[l + 1] = sim.plug[1] - up; p[l + 2] = sim.plug[2]; }
+    // Level: the three points behind the plug lie in a line to its right, so the
+    // plug points left, into a socket. Blended in by sim.level.
+    if (sim.held === last && sim.level > 0) {
+      for (let j = 1; j <= 3; j++) {
+        const a = (last - j) * 3;
+        p[a] += (sim.hold[0] + sim.rest1[last - j] * j - p[a]) * sim.level;
+        p[a + 1] += (sim.hold[1] - p[a + 1]) * sim.level;
+      }
+    }
     if (sim.held > 0 && sim.held < last) {
       const h = sim.held * 3;
       p[h] = sim.hold[0]; p[h + 1] = sim.hold[1];
     }
   };
   // Pinned points have zero weight in the constraints.
-  const w = (i) => (i === 0 || i === last || i === sim.held ? 0 : 1);
+  const w = (i) => (i === 0 || i === last || i === sim.held || (sim.level >= 1 && sim.held === last && i >= last - 3) ? 0 : 1);
 
   for (let pass = 0; pass < passes; pass++) {
     pin();
@@ -179,8 +189,9 @@ export function settle(sim, seconds = 3) {
 }
 
 // Hold the cable at point i and pull it to (x, y).
-export function grab(sim, i, x, y) {
+export function grab(sim, i, x, y, level = 0) {
   sim.held = i;
+  sim.level = level;
   sim.hold[0] = x;
   sim.hold[1] = y;
   sim.plugAnim = null;
@@ -195,4 +206,5 @@ export function release(sim, dur = 0.6) {
     sim.plugAnim = { from: sim.plug.slice(), t: 0, dur };
   }
   sim.held = -1;
+  sim.level = 0;
 }

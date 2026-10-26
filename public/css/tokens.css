@@ -11,6 +11,7 @@
   --ground: #2E1A22;     /* the plum: hero and footer ground, the intro's jack */
   --cream: #F5EDE2;      /* text on plum; snapshot frames; the cord */
   --graphite: #141110;   /* nav bar, dark buttons, active states */
+  --signal: #F2662B;     /* signal orange: the Plug-in button's connect ring and lamp only */
 
   --ink-rgb: 29 24 22;
   --cream-rgb: 245 237 226;
@@ -29,7 +30,6 @@
 
   /* Cream on ground */
   --cream-15: rgb(var(--cream-rgb) / .15);
-  --cream-30: rgb(var(--cream-rgb) / .30);   /* the composer's writing line */
   --cream-36: rgb(var(--cream-rgb) / .36);
   --cream-40: rgb(var(--cream-rgb) / .40);
   --cream-55: rgb(var(--cream-rgb) / .55);

@@ -1,11 +1,12 @@
 // Pre-launch checks (brief section K). Needs the preview server (npm run serve).
 //   node scripts/check-launch.mjs
 // Prints PASS / FAIL per check.
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
 import { checkScroll } from './check-scroll.mjs';
 import { checkHow } from './check-how.mjs';
+import { checkOverlap } from './check-overlap.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -40,9 +41,12 @@ const method = new RegExp(Buffer.from('bjhufGdlbWluaXxvcGVuYWl8XGJWUFNcYnxwYWdlc
 const methodHits = siteText.filter(([, t]) => method.test(t)).map(([f, t]) => `${f}: ${t.match(method)[0]}`);
 report('No stack or method named in the site (tool names, test links)', methodHits.length === 0, methodHits.join(' | '));
 // The demo site is never linked (owner, 26 Oct 2026): visitors ask on WhatsApp instead.
+// The demo site is linked once (owner, 26 Oct 2026, round 5): the Riya row's "Chat with Riya now ↗"; nowhere else.
 const demoHost = ['demo', 'viraajautomates', 'tech'].join('.');
-const demoHits = siteText.filter(([, t]) => t.includes(demoHost) || t.includes('riya=open')).map(([f]) => f);
-report('Zero links to the demo site in the site files', demoHits.length === 0, demoHits.join(' '));
+const riyaDemo = `https://${demoHost}/?riya=open`;
+const demoHits = siteText.flatMap(([f, t]) => t.split(demoHost).slice(1).map(() => f));
+const riyaRow = index.split('<li class="row" data-row>')[3] || '';
+report('The demo site is linked only from the Riya row ("Chat with Riya now ↗", new tab)', demoHits.length === 1 && riyaRow.includes(`<a class="proof" href="${riyaDemo}" target="_blank" rel="noopener"`) && riyaRow.includes('>Chat with Riya now <span aria-hidden="true">↗</span>'), demoHits.join(' | '));
 // No speed claims (owner, 26 Oct 2026).
 const speed = /in seconds|within seconds|instant|within the hour|in minutes|lightning|blazing/i;
 // Visitor-facing text lives in the pages and in the two scripts that write sentences.
@@ -50,32 +54,44 @@ const speedHits = siteText.filter(([f]) => /\.html$|clock\.js$|message\.js$/.tes
 report('No speed claims ("in seconds" and the like)', speedHits.length === 0, speedHits.join(' | '));
 report('No "Sample" names left (fictional names, captions say "names changed")', !siteText.some(([f, t]) => f.endsWith('.html') && /[A-Z][a-z]+ Sample/.test(t)));
 // The one exception is the owner's own hero line (round 4, 26 Oct 2026), in the hero and the meta description.
-const ownerLine = "for clinics and small businesses in Mumbai and Pune.";
-report('No "small business" anywhere a visitor can read (except the owner’s hero line)', !siteText.some(([, t]) => /small business/i.test(t.split(ownerLine).join(''))));
+
+report('No "small business" anywhere a visitor can read', !siteText.some(([, t]) => /small business/i.test(t)));
 const copy = html.map((f) => readFileSync(f, 'utf8')).join('\n');
 report('No "reminders" claim anywhere', !/remind/i.test(copy));
 report('No "Line 01" / "Line open" labels left', !/\(\s*Line\b|Line open|No line here/.test(copy));
 report('No badges drawn on images', !/snap__tag|class="[^"]*badge/.test(copy));
-// Round 3 (owner, 26 Oct 2026): honest limits, one WhatsApp link per service, no locked report.
+// Round 3 (owner, 26 Oct 2026): honest limits, one call to action per service, no locked report.
 report('No "unless you\'ve added them" anywhere', !/unless you(?:'|&#39;|’)ve added them/i.test(copy));
 report('No "every customer" / "never miss" claims', !/every customer|never miss/i.test(copy));
 const demoCta = (index.match(/>Ask me for a live demo/g) || []).length;
 report('"Ask me for a live demo" at most twice on the home page (hero, How it works)', demoCta >= 1 && demoCta <= 2, `${demoCta}x`);
 const rows = index.split('<li class="row" data-row>').slice(1).map((r) => r.slice(0, r.indexOf('</details>')));
+// One call to action per row: a WhatsApp link, or (Riya) the demo link.
 const rowBad = rows.filter((r) => {
   const title = r.match(/<h3 class="row__title">([\s\S]*?)<\/h3>/)?.[1] || '';
-  return /<a\b/.test(title) || !/<button class="pw" type="button" data-preview="\w+"/.test(title) || (r.match(/href="https:\/\/wa\.me\//g) || []).length !== 1;
+  const ctas = (r.match(/href="https:\/\/wa\.me\//g) || []).length + (r.match(/href="https:\/\/demo\./g) || []).length;
+  return /<a\b/.test(title) || !/<button class="pw" type="button" data-preview="\w+"/.test(title) || ctas !== 1;
 }).map((r) => r.match(/class="pw__word">([^<]+)/)?.[1] || '?');
-report('Service titles open a preview, never WhatsApp; each row has exactly one WhatsApp link', rows.length === 4 && rowBad.length === 0, rowBad.join(' | '));
-report('Free check: no locked report card, no "Unlock", one "Send me your business name" button', !/data-report|report__|unlock/i.test(index) && (index.match(/>Send me your business name </g) || []).length === 1);
+report('Service titles open a preview, never a link; each row has exactly one call to action', rows.length === 4 && rowBad.length === 0, rowBad.join(' | '));
 report('FAQ "Is my customers\' data safe?" names the AI service and the automation server', index.includes('Requests are saved in your own Google Sheet and inbox. To reply, messages pass through the AI service and the automation server I run. Riya never gives a diagnosis or fees.'));
 report('Privacy notice names the AI service and the automation server as processors', /AI service and the automation server I run\. Both act as processors/.test(readFileSync('public/privacy.html', 'utf8')));
-// Round 4 (owner, 26 Oct 2026): the hero promise and composer, plain buttons, positive reassurance.
+// Rounds 4–6 (owner, 26 Oct 2026): the hero promise; the Plug-in button as the one call to action.
 report('Hero H1 is the promise, not the name', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Get found on Google\.<\/span><\/span>\s*<span class="line-mask"><span[^>]*>Answer website enquiries even after hours\.<\/span><\/span>\s*<\/h1>/.test(index));
-report('Hero composer: a real label, the placeholder, aria-live preview, the reassurance line', /<label class="compose__field"><span class="sr-only">Business name<\/span><input[^>]*placeholder="Your business name"/.test(index) && /aria-live="polite" data-compose-preview/.test(index) && index.includes('It comes straight to my WhatsApp. Only I read it.'));
-report('No "Get my free check" left; buttons have no boxed arrow', !/Get my free check|btn__box|btn--plug/.test(copy));
+// Round 6 (owner, 26 Oct 2026): the Plug-in button is the one call to action, everywhere.
+const PLUG_MSG = 'Hi Viraaj, saw your website. Can you do a free check for my business?';
+const PLUG_HREF = `https://wa.me/919653375679?text=${encodeURIComponent(PLUG_MSG)}`;
+const pages6 = { '/': index, '/work/smile-dental/': caseHtml, '/404.html': readFileSync('public/404.html', 'utf8') };
+const plugCount = Object.fromEntries(Object.entries(pages6).map(([p, t]) => [p, (t.match(/<div class="plugin plugin--(?:light|dark)[^"]*"[^>]*data-plugin/g) || []).length]));
+const plugBad = Object.entries(pages6).flatMap(([p, t]) => [...t.matchAll(/<a class="plugin__btn"([^>]*)>/g)].filter((m) => !m[1].includes(`href="${PLUG_HREF}"`) || !m[1].includes('aria-label="Check my business on WhatsApp"') || / target=/.test(m[1])).map(() => p));
+report('The Plug-in button everywhere "Check my business" was: hero, menu, Free check, footer; case study menu, band, footer; 404 (same tab, its own message, aria-label)', plugCount['/'] === 4 && plugCount['/work/smile-dental/'] === 3 && plugCount['/404.html'] === 1 && plugBad.length === 0 && !/>Check my business <span class="btn__arrow"/.test(copy), `${JSON.stringify(plugCount)} ${plugBad.join(' ')}`);
+const heroCopy = index.slice(index.indexOf('<div class="hero__copy"'), index.indexOf('<div class="hero__strip"'));
+report('Hero holds only the H1, the sub-line, the Plug-in button and one micro line', !/hero__label|compose|hero__link|<input/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy) && (heroCopy.match(/<p class="plugin__micro t-tag">Free · on WhatsApp · within one working day<\/p>/g) || []).length === 1 && heroCopy.includes('for clinics and businesses in Mumbai and Pune.'));
+const checkSec = index.slice(index.indexOf('id="check"'), index.indexOf('</section>', index.indexOf('id="check"')));
+report('Free check: the report teaser (statement and three steps) static, no field; the Plug-in button', !/<input|data-compose|data-report|unlock/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec));
+report('No "Get my free check", no boxed arrows, no composer left', !/Get my free check|btn__box|btn--plug|compose__/.test(copy) && !existsSync('public/js/compose.js'));
 report('"no lock-in" only in Plain terms', (copy.match(/lock-in/gi) || []).length === 1 && /id="terms"[\s\S]*?no lock-in[\s\S]*?<\/section>/.test(index));
 report('No negative reassurance words ("spam", "never share", "no hidden", "no charge")', !/\bspam\b|never share|no hidden|no charge|nothing is sold/i.test(copy));
+report('No source tags like "(hero)" in any WhatsApp text', !/text=[^"]*%20\((?:hero|footer|nav|menu|services|how|free|case|404)/.test(copy));
 
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader'] });
 const fresh = async (opts = {}, seen = true) => {
@@ -141,13 +157,8 @@ const fresh = async (opts = {}, seen = true) => {
   }
   report('Every link works (internal pages, anchors, email)', broken.length === 0, broken.join(' | '));
   const waBad = wa.filter((h) => { const u = new URL(h); return u.pathname !== '/919653375679' || !u.searchParams.get('text'); });
-  // Every message ends with a source tag in brackets, "(hero)", "(footer)"; one that ends in a blank ("Business name: ") has it just before the blank.
-  const TAG = / \(([a-z0-9 ]+)\)(?=[.?]? ?(?:[^.?()]+: )?$)/;
-  const all = wa.map((h) => new URL(h).searchParams.get('text'));
-  const untagged = [...new Set(all.filter((t) => !TAG.test(t)))];
-  report('Every WhatsApp message carries a source tag at its end', untagged.length === 0, untagged.join(' | '));
-  const texts = new Set(all.map((t) => t.replace(TAG, '')));
-  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, I'd like the free check for my business.", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
+  const texts = new Set(wa.map((h) => new URL(h).searchParams.get('text')));
+  const want = ["Hi Viraaj, I'd like the free check. Business name: ", "Hi Viraaj, saw your website. Can you do a free check for my business?", "Hi Viraaj, I'd like to know where I stand on Google. Business name: ", 'Hi Viraaj, can you check my website? Link: ', 'Hi Viraaj, I found your website and have a question.', 'Hi Viraaj, I saw the demo on your website. Can you show me how it would work for my business?'];
   report('WhatsApp prefilled texts: free check, hero composer, Google, website, question, live demo', want.every((t) => texts.has(t)), want.filter((t) => !texts.has(t)).join(' | '));
   report(`Every WhatsApp link opens +91 96533 75679 with prefilled text (${wa.length} links)`, wa.length > 0 && waBad.length === 0, [...new Set(wa.map((h) => new URL(h).searchParams.get('text')))].map((t) => `"${t}"`).join(' / '));
   await ctx.close();
@@ -279,39 +290,58 @@ await checkHow({ browser, base: BASE, report });
   await ctx.close();
 }
 
-// ---------- Hero composer: preview and link follow the field; button or Enter opens one WhatsApp tab ----------
+// ---------- The Plug-in button: hover, click, taps, reduced motion, no JS ----------
+// (The hero's 3D cord reaching for the socket, with GIFs: scripts/record-plugin.mjs.)
 {
-  const results4 = [];
-  for (const w of [1440, 375]) {
+  const MSG = 'Hi Viraaj, saw your website. Can you do a free check for my business?';
+  const stub = (ctx) => ctx.route('https://wa.me/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: 'whatsapp' }));
+  const res6 = [];
+  for (const [w, sel] of [[1440, '#check'], [1440, '#contact'], [375, '#check']]) {
     const m = w < 768;
     const ctx = await fresh({ viewport: { width: w, height: m ? 812 : 900 }, isMobile: m, hasTouch: m });
-    await ctx.route('https://wa.me/**', (r) => r.fulfill({ status: 200, body: 'whatsapp' }));
+    await stub(ctx);
     const page = await ctx.newPage();
     await page.goto(BASE + '/', { waitUntil: 'load' });
-    await page.waitForTimeout(1500);
-    const empty = await page.textContent('[data-compose-preview]');
-    await page.fill('[data-compose-name]', 'Smile Dental, Andheri');
-    const st = await page.evaluate(() => { const b = document.querySelector('[data-compose-send]'); const cs = getComputedStyle(b); const r = b.getBoundingClientRect(); return { preview: document.querySelector('[data-compose-preview]').textContent, href: b.href, font: cs.fontFamily, weight: cs.fontWeight, upper: cs.textTransform, h: r.height, w: r.width, bottom: r.bottom, input: document.querySelector('[data-compose-name]').getBoundingClientRect().width }; });
-    const want = "Hi Viraaj, I'd like the free check for Smile Dental, Andheri. (hero)";
-    const popup = ctx.waitForEvent('page', { timeout: 3000 }).catch(() => null);
-    await page.press('[data-compose-name]', 'Enter');
-    const tab = await popup;
-    const opened = tab ? decodeURIComponent(new URL(tab.url()).searchParams.get('text') || '') : '';
-    results4.push([w, empty === "Hi Viraaj, I'd like the free check for my business. (hero)" && st.preview === want && decodeURIComponent(new URL(st.href).searchParams.get('text')) === want && opened === want, `${w}: empty "${empty}", typed "${st.preview}", Enter opened "${opened}"`]);
-    results4.push([w, /Inter/.test(st.font) && st.weight === '500' && st.upper === 'none' && st.h >= 48 && (!m || Math.abs(st.w - st.input) < 2), `${w}: button ${st.font.split(',')[0]} ${st.weight} ${st.upper}, ${Math.round(st.h)} px tall, ${Math.round(st.w)} px wide (input ${Math.round(st.input)})`]);
-    if (m) results4.push([w, st.bottom <= 812, `375: button bottom at ${Math.round(st.bottom)} px of 812`]);
+    await page.waitForTimeout(1200);
+    const btn = page.locator(`${sel} .plugin__btn`);
+    await btn.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(900);
+    const cls = () => page.locator(`${sel} [data-plugin]`).getAttribute('class');
+    const b = await btn.boundingBox();
+    let first = '';
+    if (!m) { await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 }); await page.waitForTimeout(700); first = await cls(); }
+    else { await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); await page.waitForTimeout(700); first = await cls(); }
+    const look = await btn.evaluate((a) => { const cs = getComputedStyle(a), r = a.getBoundingClientRect(); return { h: Math.round(r.height), w: Math.round(r.width), font: cs.fontFamily.split(',')[0], weight: cs.fontWeight, size: cs.fontSize, radius: cs.borderRadius, socket: getComputedStyle(a.querySelector('.plugin__socket')).display, bubble: getComputedStyle(a.closest('[data-plugin]').querySelector('.plugin__bubble')).visibility }; });
+    const t0 = Date.now();
+    const nav = page.waitForURL(/wa\.me/, { timeout: 3000 }).then(() => Date.now() - t0).catch(() => -1);
+    if (!m) { await page.mouse.down(); await page.mouse.up(); } else await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+    const connected = await page.waitForFunction((s) => document.querySelector(`${s} [data-plugin]`)?.classList.contains('is-connected'), sel, { timeout: 400 }).then(() => true).catch(() => false);
+    const ms = await nav;
+    const sent = decodeURIComponent(page.url());
+    res6.push([`${w} ${sel}`, /is-open/.test(first) && !/is-cord/.test(first) && (!m || /is-armed/.test(first)) && look.bubble === 'visible' && connected && ms >= 430 && ms < 1000 && sent.includes(MSG) && look.h >= 56 && look.w >= 280 && look.w <= 310 && look.font === 'Inter' && look.weight === '500' && look.size === '18px' && look.radius === '4px' && look.socket !== 'none', `${m ? 'tap' : 'hover'}: ${first.replace('plugin ', '')}; ${look.w}×${look.h} ${look.font} ${look.weight} ${look.size}; connected ${connected}; WhatsApp after ${ms} ms`]);
     await ctx.close();
   }
-  report('Hero composer: preview and link follow the name; Enter opens WhatsApp with exactly the preview', results4.filter((_, i) => [0, 2].includes(i)).every((r) => r[1]), results4.filter((_, i) => [0, 2].includes(i)).map((r) => r[2]).join(' | '));
-  report('Hero button: Inter 500, sentence case, at least 48 px; full width under the field on phones, above the fold', results4.filter((_, i) => [1, 3, 4].includes(i)).every((r) => r[1]), results4.filter((_, i) => [1, 3, 4].includes(i)).map((r) => r[2]).join(' | '));
-  // Without JavaScript: no field, and the button is the plain free-check link.
+  report('Plug-in button (2D plug): hover or first tap shows the message; click or second tap connects, then WhatsApp in this tab about 450 ms later', res6.every((r) => r[1]), res6.map((r) => `${r[0]}: ${r[2]}`).join(' | '));
+  // Reduced motion: a plain link with an arrow, no socket, straight to WhatsApp.
+  const rc = await fresh({ reducedMotion: 'reduce' });
+  await stub(rc);
+  const rp = await rc.newPage();
+  await rp.goto(BASE + '/', { waitUntil: 'load' });
+  const rm = await rp.evaluate(() => { const a = document.querySelector('.hero .plugin__btn'); return { arrow: getComputedStyle(a.querySelector('.plugin__arrow')).display, socket: getComputedStyle(a.querySelector('.plugin__socket')).display }; });
+  const r0 = Date.now();
+  const rnav = rp.waitForURL(/wa\.me/, { timeout: 3000 }).then(() => Date.now() - r0).catch(() => -1);
+  await rp.click('.hero .plugin__btn');
+  const rms = await rnav;
+  report('Plug-in button with reduced motion: "Check my business →", straight to WhatsApp', rm.arrow !== 'none' && rm.socket === 'none' && rms >= 0 && rms < 400, `${JSON.stringify(rm)}, ${rms} ms`);
+  await rc.close();
+  // Without JavaScript: the same plain link.
   const nj = await fresh({ javaScriptEnabled: false });
   const np = await nj.newPage();
   await np.goto(BASE + '/', { waitUntil: 'load' });
-  const nojs = await np.evaluate(() => ({ field: getComputedStyle(document.querySelector('.compose__field')).display, text: new URL(document.querySelector('[data-compose-send]').href).searchParams.get('text') }));
-  report('Hero without JavaScript: the field is hidden, the button is the plain free-check link', nojs.field === 'none' && nojs.text === "Hi Viraaj, I'd like the free check (hero). Business name: ", `${nojs.field}, "${nojs.text}"`);
+  const nojs = await np.evaluate(() => [...document.querySelectorAll('.plugin__btn')].map((a) => ({ arrow: getComputedStyle(a.querySelector('.plugin__arrow')).display, socket: getComputedStyle(a.querySelector('.plugin__socket')).display, text: new URL(a.href).searchParams.get('text') })));
+  report('Plug-in button without JavaScript: a plain link with an arrow and the message', nojs.length === 4 && nojs.every((x) => x.arrow !== 'none' && x.socket === 'none' && x.text === MSG), JSON.stringify(nojs[0]));
   await nj.close();
-  // Every primary button on every page: Inter, sentence case.
+  // Every other primary button: Inter 500, sentence case.
   const bc = await fresh();
   const bp = await bc.newPage();
   const mono = [];
@@ -319,9 +349,14 @@ await checkHow({ browser, base: BASE, report });
     await bp.goto(BASE + path, { waitUntil: 'load' });
     mono.push(...(await bp.evaluate(() => [...document.querySelectorAll('.btn')].filter((b) => { const cs = getComputedStyle(b); return !/Inter/.test(cs.fontFamily) || cs.textTransform !== 'none' || cs.fontWeight !== '500'; }).map((b) => b.textContent.trim()))).map((t) => `${path}: ${t}`));
   }
-  report('Every primary button is Inter 500, sentence case', mono.length === 0, mono.join(' | '));
+  report('Every other primary button is Inter 500, sentence case', mono.length === 0, mono.join(' | '));
   await bc.close();
 }
+
+
+// ---------- No text on text while scrolling: How it works (pin), process rows, services, the case study (sticky tabs) ----------
+await checkOverlap({ browser, base: BASE, report });
+
 
 // ---------- Keyboard ----------
 {
