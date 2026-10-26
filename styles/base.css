@@ -15,18 +15,6 @@
   font-weight: 100 900;
   font-display: swap;
 }
-@font-face {
-  font-family: "DM Mono";
-  src: url("../fonts/dm-mono-latin-400.woff2") format("woff2");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DM Mono";
-  src: url("../fonts/dm-mono-latin-500.woff2") format("woff2");
-  font-weight: 500;
-  font-display: swap;
-}
 
 /* ---------- Page changes: home <-> case study cross-fade (View Transitions) ----------
    Where the browser supports cross-document view transitions, the old page

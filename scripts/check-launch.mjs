@@ -10,6 +10,7 @@ import { checkOverlap } from './check-overlap.mjs';
 import { checkCable } from './check-cable.mjs';
 import { checkCursor } from './check-cursor.mjs';
 import { checkSpeed } from './check-speed.mjs';
+import { checkMono } from './check-mono.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -200,6 +201,9 @@ await checkHow({ browser, base: BASE, report });
 
 // ---------- Speed and seamless: hero from first paint, fonts, page changes, back button, pin, scrolling (scripts/check-speed.mjs) ----------
 await checkSpeed({ browser, base: BASE, report });
+
+// ---------- Mono labels on one line at 375 and 320 (scripts/check-mono.mjs) ----------
+await checkMono({ browser, base: BASE, report });
 
 // ---------- Hero: H1 visible within 1 s ----------
 {

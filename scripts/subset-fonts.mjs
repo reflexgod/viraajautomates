@@ -1,5 +1,6 @@
-// Cuts the four web fonts down to the characters the site uses (every page and
-// script in public/), plus all of ASCII and Latin-1 and common punctuation as a
+// Cuts the two web fonts (Inter, Faculty Glyphic; labels use the device's own
+// monospace) down to the characters the site uses (every page and script in
+// public/), plus all of ASCII and Latin-1 and common punctuation as a
 // margin, keeping Inter's weight axis and the features the CSS asks for
 // (cv11, ss01, tabular figures). Smaller fonts leave more of a phone's first
 // second for the hero picture. Needs Python with fontTools and brotli
@@ -14,8 +15,6 @@ const nm = 'node_modules/';
 const FONTS = [
   ['@fontsource/faculty-glyphic/files/faculty-glyphic-latin-400-normal.woff2', 'public/fonts/faculty-glyphic-latin-400.woff2'],
   ['@fontsource-variable/inter/files/inter-latin-wght-normal.woff2', 'public/fonts/inter-latin-wght.woff2'],
-  ['@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2', 'public/fonts/dm-mono-latin-400.woff2'],
-  ['@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2', 'public/fonts/dm-mono-latin-500.woff2'],
 ];
 
 // Every character in the site's pages and scripts (the vendor libraries aside).

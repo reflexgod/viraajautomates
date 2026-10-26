@@ -47,7 +47,7 @@
   /* The "Fallback" faces (styles/fallbacks.css) are local fonts sized like the web fonts: no jump on swap. */
   --font-display: "Faculty Glyphic", "Faculty Glyphic Fallback", Georgia, serif;          /* name, step titles, footer line */
   --font-sans: "Inter", "Inter Fallback", "Inter Fallback Android", system-ui, -apple-system, sans-serif;  /* everything you read */
-  --font-mono: "DM Mono", ui-monospace, monospace;             /* tiny labels only */
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;  /* tiny labels only: the device's own monospace, nothing to download */
 
   --fs-hero: clamp(2.75rem, 4.6vw, 5.25rem);                  /* ~66px at 1440 */
   --fs-hero-sub: clamp(1.0625rem, 0.6rem + 1.25vw, 1.625rem);  /* ~26px at 1440 */

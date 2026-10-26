@@ -9,8 +9,6 @@ const copies = [
   // Fonts (Latin subset only, SIL Open Font License)
   ['@fontsource/faculty-glyphic/files/faculty-glyphic-latin-400-normal.woff2', 'public/fonts/faculty-glyphic-latin-400.woff2'],
   ['@fontsource-variable/inter/files/inter-latin-wght-normal.woff2', 'public/fonts/inter-latin-wght.woff2'],
-  ['@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2', 'public/fonts/dm-mono-latin-400.woff2'],
-  ['@fontsource/dm-mono/files/dm-mono-latin-500-normal.woff2', 'public/fonts/dm-mono-latin-500.woff2'],
   // Motion libraries
   ['gsap/dist/gsap.min.js', 'public/js/vendor/gsap.min.js'],
   ['lenis/dist/lenis.min.js', 'public/js/vendor/lenis.min.js'],
