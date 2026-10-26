@@ -3,7 +3,7 @@
 // (GitHub Pages cannot send the headers SharedArrayBuffer needs, so
 // positions travel by postMessage with a transferred buffer.)
 import { FRAMES } from './layout.js';
-import { createSim, advance, settle, grab, release } from './rope3d.js';
+import { createSim, advance, settle, grab, release, home } from './rope3d.js';
 
 let sim = null;
 let timer = 0;
@@ -52,10 +52,13 @@ onmessage = ({ data: m }) => {
       sim.lift = m.v;
       break;
     case 'grab':
-      grab(sim, m.i, m.x, m.y);
+      grab(sim, m.i, m.x, m.y, !!m.seated);
       break;
     case 'release':
-      release(sim);
+      release(sim, m.dur ?? 0.6);
+      break;
+    case 'home':
+      home(sim, m.dur);
       break;
   }
 };

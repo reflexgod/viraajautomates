@@ -125,7 +125,7 @@ function stepOnce(sim) {
     a.t = Math.min(a.t + dt, a.dur);
     const e = houseEase(a.t / a.dur);
     for (let k = 0; k < 3; k++) sim.plug[k] = a.from[k] + (sim.plugHome[k] - a.from[k]) * e;
-    sim.seated = e;
+    sim.seated = Math.max(sim.seated, e);
     if (a.t >= a.dur) sim.plugAnim = null;
   }
 
@@ -158,7 +158,7 @@ function stepOnce(sim) {
     if (sim.held === last) { p[l] = sim.hold[0]; p[l + 1] = sim.hold[1]; }
     else { p[l] = sim.plug[0]; p[l + 1] = sim.plug[1] - up; p[l + 2] = sim.plug[2]; }
     // Seated: the points just behind the plug (frame.seat) lie along it, so it points into the socket.
-    const seat = sim.held === last ? 0 : sim.seated;
+    const seat = sim.seated;
     if (sim.dir && seat > 0) {
       let along = 0;
       for (let j = 1; j <= sim.seat; j++) {
@@ -175,7 +175,7 @@ function stepOnce(sim) {
     }
   };
   // Pinned points have zero weight in the constraints.
-  const w = (i) => (i === 0 || i === last || i === sim.held || (sim.dir && sim.seated >= 1 && sim.held !== last && i >= last - sim.seat) ? 0 : 1);
+  const w = (i) => (i === 0 || i === last || i === sim.held || (sim.dir && sim.seated >= 1 && i >= last - sim.seat) ? 0 : 1);
 
   for (let pass = 0; pass < passes; pass++) {
     pin();
@@ -195,22 +195,33 @@ export function settle(sim, seconds = 3) {
   for (let i = 0, n = Math.round(seconds / PHYS.dt); i < n; i++) stepOnce(sim);
 }
 
-// Hold the cable at point i and pull it to (x, y).
-export function grab(sim, i, x, y) {
+// Hold the cable at point i and pull it to (x, y). A plug held while still
+// seated (seated: true) keeps lying along the socket's axis: it is being
+// pulled against the socket's grip, not yet out.
+export function grab(sim, i, x, y, seated = false) {
   sim.held = i;
-  if (i === N - 1) sim.seated = 0;
+  if (i === N - 1 && !seated) sim.seated = 0;
   sim.hold[0] = x;
   sim.hold[1] = y;
   sim.plugAnim = null;
 }
 
-// Let go. A held plug glides back into its socket.
+// Let go. A held plug glides back into its socket over dur seconds, or, with
+// dur 0, stays where it was let go (home() sends it back later).
 export function release(sim, dur = 0.6) {
   const last = N - 1;
   if (sim.held === last) {
     const l = last * 3;
     sim.plug = [sim.pos[l], sim.pos[l + 1], sim.pos[l + 2]];
-    sim.plugAnim = { from: sim.plug.slice(), t: 0, dur };
+    sim.plugAnim = dur > 0 ? { from: sim.plug.slice(), t: 0, dur } : null;
   }
   sim.held = -1;
+}
+
+// A plug left out glides back into its socket.
+export function home(sim, dur = 0.8) {
+  if (sim.held === N - 1 || sim.plugAnim) return;
+  const [a, b, c] = sim.plug, [x, y, z] = sim.plugHome;
+  if (Math.hypot(a - x, b - y, c - z) < 0.01) return;
+  sim.plugAnim = { from: sim.plug.slice(), t: 0, dur };
 }

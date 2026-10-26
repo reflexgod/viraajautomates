@@ -50,7 +50,8 @@ export async function checkSpeed({ browser, base = 'http://localhost:4173', repo
     await page.waitForTimeout(900);   // the copy's entrance is over
     const box = { x: 0, y: 0, width: opts.viewport.width, height: opts.viewport.height };
     const before = await page.screenshot({ clip: box });
-    await page.keyboard.press('Shift');   // a key press lets the cord load (a pointer would push it)
+    // A key press lets the cord load on a laptop (a pointer would push it); a phone's first touch, away from the cord.
+    if (opts.isMobile) await page.touchscreen.tap(30, 300); else await page.keyboard.press('Shift');
     const live = await page.waitForSelector('[data-hero].is-live', { timeout: 15000 }).then(() => true, () => false);
     await page.waitForTimeout(700);   // the 0.6 s fade is over; the breeze already sways it a little (a jump scores 150+)
     const after = await page.screenshot({ clip: box });
@@ -180,7 +181,7 @@ export async function checkSpeed({ browser, base = 'http://localhost:4173', repo
     const page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
     await page.goto(`${base}/`, { waitUntil: 'load' });
-    await page.keyboard.press('Shift');
+    if (opts.isMobile) await page.touchscreen.tap(30, 300); else await page.keyboard.press('Shift');
     const live = cord ? await page.waitForSelector('[data-hero].is-live', { timeout: 15000 }).then(() => true, () => false) : false;
     await page.waitForTimeout(2500);
     if (slow > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: slow });

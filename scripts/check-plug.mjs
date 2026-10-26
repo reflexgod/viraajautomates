@@ -1,7 +1,7 @@
 // The hero cord is plugged in, and the button says so only when it is:
 // - the plug's tip within 4 px of the centre of the button's socket, for the
 //   still image and the live cord, right after load, at 3 s (live by then on
-//   touch screens), after 5 s idle, after scrolling down and back to the top,
+//   touch screens, after the first touch), after 5 s idle, after scrolling down and back to the top,
 //   and after the iOS URL bar collapses (a taller viewport); at 1920, 1720,
 //   1440, 1280, 1024 and 768 wide and on the iPhone 13 (390), iPhone SE (3rd
 //   gen) (375) and iPhone SE (320) presets, touch on, in WebKit and Chromium;
@@ -88,8 +88,9 @@ export async function checkPlug({ base = 'http://localhost:4173', report }) {
       await page.goto(`${base}/`, { waitUntil: 'load' });
       const steps = {};
       steps.load = await page.evaluate(measure, F);
-      // A mouse wakes the cord on a laptop (in a corner, away from the cord); a phone gets nothing.
+      // A mouse wakes the cord on a laptop (in a corner, away from the cord); a phone, the first touch.
       if (!touch) await page.mouse.move(8, dev.viewport.height - 8);
+      else await page.touchscreen.tap(30, 300);
       await page.waitForTimeout(3000);
       steps.at3s = await page.evaluate(measure, F);
       if (engine === 'WebKit' && (w === 375 || w === 390)) await page.screenshot({ path: `${SHOTS}/hero-${w}-${steps.at3s.live ? 'live' : 'still'}.png` });
@@ -149,6 +150,7 @@ export async function checkPlug({ base = 'http://localhost:4173', report }) {
     const cdp = kind === 'touch' ? await ctx.newCDPSession(page) : null;
     await page.goto(`${base}/`, { waitUntil: 'load' });
     if (kind === 'mouse') await page.mouse.move(8, 892);
+    else await page.touchscreen.tap(30, 300);
     await page.waitForFunction(() => document.querySelector('[data-hero]').classList.contains('is-live'), null, { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(1500);
     const before = await page.evaluate(measure, F);
@@ -163,12 +165,13 @@ export async function checkPlug({ base = 'http://localhost:4173', report }) {
       await press(page, kind, cdp, 'up');
       await page.waitForTimeout(120);
       const released = await page.evaluate(measure, F);
-      await page.waitForTimeout(1800);
+      // Let go far away it stays out, then goes home after 3 s untouched (check-fidget.mjs times it).
+      await page.waitForTimeout(4800);
       const settled = await page.evaluate(measure, F);
       Object.assign(res, { held: brief(held), released: brief(released), settled: brief(settled) });
       ok = ok && held.tip > TOL && held.state === 'false' && agrees(held) && agrees(released) && atRest(settled) && [held, released, settled].every((m) => m.text === CTA);
     }
-    report(`Hero plug, ${name}: dragged out it shows unplugged, let go far away it settles back into the socket and shows plugged; the text stays "${CTA}"`, ok, JSON.stringify(res));
+    report(`Hero plug, ${name}: dragged out it shows unplugged, let go far away it goes back into the socket and shows plugged; the text stays "${CTA}"`, ok, JSON.stringify(res));
 
     // Click (or two taps), WhatsApp, back: the text is unchanged, the state agrees with the plug.
     const b = await page.locator('.hero .plugin__btn').boundingBox();

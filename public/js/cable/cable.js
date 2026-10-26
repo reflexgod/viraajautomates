@@ -22,6 +22,9 @@ const REACH_PX = 96;
 const DRAG_PX = 320;         // a held point can be pulled up to 320 px from where it was taken
 const LIFT = 1.25;           // entrance/exit: how far above its rest pose the cord hangs, in frame heights
 const LONG_PRESS_MS = 260;
+const UNPLUG_PX = 20;        // the socket grips the plug: pulled less than this it hardly moves, then it pops out
+const SNAP_PX = 60;          // let go with its tip this close to the socket, the plug is pulled back in
+const HOME_MS = 3000;        // a plug left out goes home after this long untouched
 const PLUGGED_PX = 4;        // the plug counts as in its socket when its tip is this close to the socket's centre   // touch: hold this long to take hold of the cord
 const STRANDS = 18;          // braid carriers around the cord, each direction
 const TILE_ALONG = 9;        // strands crossing one texture tile lengthways
@@ -87,6 +90,33 @@ async function braidTextures(size) {
   return { colour, height };
 }
 
+// The two pieces of set-up that can't be split into short tasks run ahead,
+// at idle after load on a touch screen (js/hero.js), so the live cord can
+// start on the first touch or scroll without holding that scroll up: the
+// WebGL context (~150 ms of main thread in WebKit) and the braid texture (in
+// short tasks). createCable picks them up for the same canvas and tier.
+const warmed = new WeakMap();
+function makeRenderer(canvas, tier, still) {
+  const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!still });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.dpr));
+  renderer.outputColorSpace = SRGBColorSpace;
+  renderer.toneMapping = NeutralToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.setClearColor(0x000000, 0);
+  return renderer;
+}
+export function prewarmCable(hero, tier) {
+  const canvas = hero.querySelector('[data-cable-canvas]');
+  if (!warmed.has(canvas)) {
+    warmed.set(canvas, (async () => {
+      const renderer = makeRenderer(canvas, tier, null);
+      await pause();
+      return { tier: tier.name, renderer, tex: await braidTextures(tier.name === 'high' ? 512 : 256) };
+    })());
+  }
+  return warmed.get(canvas);
+}
+
 // still: { x0, y0, x1, y1 } renders that region of the frame once, for the
 // fallback image (scripts/make-cable-still.mjs). No input, no loop.
 // onLost: called once if the WebGL context is lost (the page may try again).
@@ -116,12 +146,9 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   worker.onmessage = (e) => { pos = e.data; };
 
   /* ---------- Renderer and camera ---------- */
-  const renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!still });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.dpr));
-  renderer.outputColorSpace = SRGBColorSpace;
-  renderer.toneMapping = NeutralToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  renderer.setClearColor(0x000000, 0);
+  const ahead = !still && warmed.has(canvas) ? await warmed.get(canvas).catch(() => null) : null;
+  const warm = ahead && ahead.tier === tier.name ? ahead : null;
+  const renderer = warm ? warm.renderer : makeRenderer(canvas, tier, still);
   if (tier.realShadows) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = VSMShadowMap;
@@ -189,7 +216,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   }
 
   /* ---------- Materials ---------- */
-  const tex = await braidTextures(tier.name === 'high' ? 512 : 256);
+  const tex = warm ? warm.tex : await braidTextures(tier.name === 'high' ? 512 : 256);
   const tileLen = (2 * Math.PI * R * TILE_ALONG) / STRANDS; // keeps strands at 45 degrees
   const colourMap = new CanvasTexture(tex.colour);
   colourMap.colorSpace = SRGBColorSpace;
@@ -197,6 +224,9 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   for (const t of [colourMap, heightMap]) {
     t.wrapS = t.wrapT = RepeatWrapping;
     t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    // Uploaded now, each in its own task, not in the first frame.
+    await pause();
+    renderer.initTexture(t);
   }
   const cordMat = new MeshPhysicalMaterial({
     map: colourMap,
@@ -403,11 +433,16 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
 
   // In the socket or not, from where the plug's tip really is.
   let plugged = null;
-  function checkPlugged() {
-    if (!onPlug || !view.sock) return;
+  // The tip's distance from the socket's centre, in px.
+  const tipGap = () => {
+    if (!view.sock) return Infinity;
     const tx = view.ox + (plugSpan.x + plugSpan.dx * PLUG_LEN) * view.s, ty = view.oy + (plugSpan.y + plugSpan.dy * PLUG_LEN) * view.s;
-    const now = Math.hypot(tx - view.sock.x, ty - view.sock.y) <= PLUGGED_PX;
-    if (now !== plugged) { plugged = now; onPlug(now); }
+    return Math.hypot(tx - view.sock.x, ty - view.sock.y);
+  };
+  function checkPlugged() {
+    if (still) return;
+    const now = tipGap() <= PLUGGED_PX;
+    if (now !== plugged) { plugged = now; onPlug?.(now); }
   }
 
   function draw(now) {
@@ -443,9 +478,13 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   }
 
   let held = -1, off = { x: 0, y: 0 }, longPress = 0, pressAt = null, pointerId = null, from = { x: 0, y: 0 };
-  // A held point can travel at most DRAG_PX (screen) from where it was taken.
+  // pull: the plug taken from its socket, until it pops out. homeTimer: a plug
+  // left out goes home. dragged: the held point moved (the click after it is
+  // swallowed, so a drag that ends over the button never opens WhatsApp).
+  let pull = null, homeTimer = 0, dragged = false, draggedAt = 0;
+  // A held point can travel at most DRAG_PX (screen) from where it was taken; the plug twice that.
   const clampDrag = (p) => {
-    const max = DRAG_PX / view.s, dx = p.x - from.x, dy = p.y - from.y, d = Math.hypot(dx, dy);
+    const max = (held === N - 1 ? 2 : 1) * DRAG_PX / view.s, dx = p.x - from.x, dy = p.y - from.y, d = Math.hypot(dx, dy);
     return d <= max ? p : { x: from.x + (dx / d) * max, y: from.y + (dy / d) * max };
   };
   const setCursor = (word) => { if (word) hero.dataset.cursor = word; else delete hero.dataset.cursor; };
@@ -460,8 +499,11 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     pointerId = e.pointerId;
     hero.classList.add('is-holding');
     try { hero.setPointerCapture(e.pointerId); } catch (err) { /* pointer gone */ }
+    clearTimeout(homeTimer);
+    dragged = false;
+    pull = held === N - 1 && plugged ? { out: false } : null;
     worker.postMessage({ type: 'pointer', x: 0, y: 0, active: false });
-    worker.postMessage({ type: 'grab', i: held, x: p.x - off.x, y: p.y - off.y });
+    worker.postMessage({ type: 'grab', i: held, x: p.x - off.x, y: p.y - off.y, seated: !!pull });
   }
 
   function onDown(e) {
@@ -484,7 +526,26 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
 
   function onMove(e) {
     const p = toFrame(e);
-    if (held >= 0) { const q = clampDrag(p); worker.postMessage({ type: 'grab', i: held, x: q.x - off.x, y: q.y - off.y }); return; }
+    if (held >= 0) {
+      let q = clampDrag(p);
+      const d = Math.hypot(q.x - from.x, q.y - from.y) * view.s;
+      if (d > 4) dragged = true;
+      let seated = false;
+      if (pull && !pull.out) {
+        if (d < UNPLUG_PX) {
+          // The socket's grip: the plug gives a little (15% of the pull) and stays in.
+          q = { x: from.x + (q.x - from.x) * 0.15, y: from.y + (q.y - from.y) * 0.15 };
+          seated = true;
+        } else {
+          // Out it pops: a small jump a little past the pointer, along the pull.
+          pull.out = true;
+          const ux = (q.x - from.x) / (d / view.s), uy = (q.y - from.y) / (d / view.s);
+          q = { x: q.x + (ux * 10) / view.s, y: q.y + (uy * 10) / view.s };
+        }
+      }
+      worker.postMessage({ type: 'grab', i: held, x: q.x - off.x, y: q.y - off.y, seated });
+      return;
+    }
     if (longPress && Math.hypot(e.clientX - pressAt.x, e.clientY - pressAt.y) > 10) { clearTimeout(longPress); longPress = 0; }
     if (e.pointerType === 'mouse') {
       worker.postMessage({ type: 'pointer', x: p.x, y: p.y, active: true });
@@ -500,12 +561,30 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     clearTimeout(longPress);
     longPress = 0;
     if (held < 0) return;
+    const wasPlug = held === N - 1;
     held = -1;
     hero.classList.remove('is-holding');
     setCursor(hero.classList.contains('is-over-cable') ? 'Grab' : null);
     try { hero.releasePointerCapture(pointerId); } catch (err) { /* already released */ }
-    worker.postMessage({ type: 'release' });
+    if (dragged) draggedAt = performance.now();
+    if (wasPlug) {
+      if (pull && !pull.out) worker.postMessage({ type: 'release', dur: 0.12 });       // never came out: back at once
+      else if (tipGap() <= SNAP_PX) worker.postMessage({ type: 'release', dur: 0.18 }); // close: pulled in, like a magnet
+      else { worker.postMessage({ type: 'release', dur: 0 }); goHomeLater(); }          // far: it stays where it fell
+    } else {
+      worker.postMessage({ type: 'release' });
+      if (plugged === false) goHomeLater();
+    }
+    pull = null;
   }
+  function goHomeLater() {
+    clearTimeout(homeTimer);
+    homeTimer = setTimeout(() => worker.postMessage({ type: 'home', dur: 0.8 }), HOME_MS);
+  }
+  // No click after a drag: a drag that ends over the button must not open WhatsApp.
+  const onClick = (e) => {
+    if (performance.now() - draggedAt < 400) { e.preventDefault(); e.stopImmediatePropagation(); draggedAt = 0; }
+  };
 
   const onLeave = () => {
     if (held >= 0) return;
@@ -528,6 +607,7 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     hero.addEventListener('pointerleave', onLeave);
     hero.addEventListener('touchmove', onTouchMove, { passive: false });
     hero.addEventListener('contextmenu', onContext);
+    document.addEventListener('click', onClick, true);
   }
 
   /* ---------- Loop; pause when off screen ---------- */
@@ -627,6 +707,8 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
     hero.removeEventListener('pointerleave', onLeave);
     hero.removeEventListener('touchmove', onTouchMove);
     hero.removeEventListener('contextmenu', onContext);
+    document.removeEventListener('click', onClick, true);
+    clearTimeout(homeTimer);
     removeEventListener('resize', relayout);
     removeEventListener('orientationchange', relayout);
     visualViewport?.removeEventListener('resize', relayout);

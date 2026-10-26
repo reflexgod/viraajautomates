@@ -13,6 +13,7 @@ import { checkSpeed } from './check-speed.mjs';
 import { checkMono } from './check-mono.mjs';
 import { checkPortrait } from './check-portrait.mjs';
 import { checkPlug } from './check-plug.mjs';
+import { checkFidget } from './check-fidget.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -389,6 +390,9 @@ await checkCable({ browser, base: BASE, report });
 
 // ---------- The hero cord is plugged into the button's socket (WebKit and Chromium, phones and laptops) ----------
 await checkPlug({ base: BASE, report });
+
+// ---------- Fidgeting: unplug and plug back (mouse and touch), the first touch or scroll on a phone stays smooth ----------
+await checkFidget({ base: BASE, report });
 
 
 // ---------- The cursor: visible on dark and light sections, never over words ----------

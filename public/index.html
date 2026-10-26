@@ -618,6 +618,11 @@
 <script>
   (function () {
     var base = 'js/', still = document.querySelector('.hero__still');
+    // A touch or scroll before the scripts run still counts as the first one
+    // (on a phone it starts the live cord: js/hero.js reads this).
+    function early() { window.__vaStirred = true; removeEventListener('touchstart', early, true); removeEventListener('scroll', early, true); }
+    addEventListener('touchstart', early, { capture: true, passive: true });
+    addEventListener('scroll', early, { capture: true, passive: true });
     function add(src, module) {
       var s = document.createElement('script');
       s.src = base + src;

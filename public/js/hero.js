@@ -37,15 +37,16 @@ export function pickTier() {
   const coarse = matchMedia('(hover: none)').matches;
   const cores = navigator.hardwareConcurrency || 4;
   const high = forced ? forced === 'high' : !coarse && cores >= 4;
-  return high
-    ? { name: 'high', dpr: 1.75, realShadows: true, shadowMap: 2048 }
-    : { name: 'low', dpr: 1.5, realShadows: false };
+  return high ? HIGH : LOW;
 }
+const HIGH = { name: 'high', dpr: 1.75, realShadows: true, shadowMap: 2048 };
+const LOW = { name: 'low', dpr: 1.5, realShadows: false };
 
-// The live cord only where it will run well. A device that averaged under
-// 24 fps keeps the still image for 7 days, then tries again. ?tier=... always tries.
+// The live cord only where it will run well. Under 24 fps it first drops to the
+// cheaper tier (for this visit); only a device still under 20 fps there keeps
+// the still image, for a day, then tries again. ?tier=... always tries.
 const OFF_KEY = 'va-cord-off';
-const OFF_DAYS = 7;
+const OFF_DAYS = 1;
 function cordBlocked() {
   if (new URLSearchParams(location.search).has('tier')) return '';
   try {
@@ -62,8 +63,9 @@ function cordBlocked() {
 // The still image of the cord is on screen from first paint, placed with its
 // plug in the button's socket (the script after the hero in index.html), and
 // stays there unless the live cord takes over. On touch screens the live cord
-// loads once the page has loaded and the main thread is idle (1.5 s at most).
-// With a mouse it loads at once when the pointer enters the hero or presses on
+// loads on the visitor's first touch or scroll, anywhere on the page (the
+// still is plugged in, so nothing looks unfinished before then); its set-up
+// runs in short tasks, so that first scroll stays smooth. With a mouse it loads at once when the pointer enters the hero or presses on
 // it; otherwise once the page has loaded, the visitor has moved the pointer or
 // pressed a key (or 5 s have passed), the hero is on screen with no scroll for
 // 300 ms, and the main thread is idle. Its first shader compile is the
@@ -100,17 +102,23 @@ export function startCable() {
   }
   let token = 0;
 
-  // Fall back (for OFF_DAYS) if 3 seconds average under 24 fps, measured after the
-  // first second, which holds the shader compile and the fade.
+  // Frames are counted for 3 s, after the first second (the fade); a hidden tab
+  // starts the count again. Under 24 fps the high tier gives way to the low one;
+  // under 20 fps on the low tier, the still stays (for OFF_DAYS).
   function watchFrames() {
     let frames = 0;
-    const t0 = performance.now() + 1000;
+    let t0 = performance.now() + 1000;
+    const live = state.live;
     const tick = (now) => {
-      if (!state.live) return;
+      if (state.live !== live) return;
+      if (document.hidden) { frames = 0; t0 = now + 1000; requestAnimationFrame(tick); return; }
       if (now >= t0) frames++;
       if (now - t0 < 3000) { requestAnimationFrame(tick); return; }
       const fps = Math.round((frames * 1000) / (now - t0));
-      if (fps >= 24) { note(`${fps} fps · live`); return; }
+      const tier = state.low ? LOW : pickTier();
+      // A tier forced in the address (?tier=, for testing) stays live whatever the frame rate.
+      if (fps >= (tier.name === 'high' ? 24 : 20) || new URLSearchParams(location.search).has('tier')) { note(`${fps} fps · live`); return; }
+      if (tier.name === 'high') { note(`${fps} fps: the low tier`); state.low = true; tries = 0; mount(); return; }
       try { localStorage.setItem(OFF_KEY, JSON.stringify({ fps, at: Date.now() })); } catch (e) {}
       note(`still image: averaged ${fps} fps`);
       state.live.destroy();
@@ -145,7 +153,7 @@ export function startCable() {
     used = true;
     try {
       const { createCable } = await import('./cable/cable.js');
-      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: pickTier(), lift: state.exit, onLost: () => { if (state.live === next) failed('WebGL context lost'); }, onPlug: (v) => { if (mine === token) plugged(v); } });
+      const next = await createCable(hero, { frame: wide.matches ? 'wide' : 'tall', tier: state.low ? LOW : pickTier(), lift: state.exit, onLost: () => { if (state.live === next) failed('WebGL context lost'); }, onPlug: (v) => { if (mine === token) plugged(v); } });
       if (mine !== token) { next.destroy(); return; }
       state.live = next;
       still.style.transform = '';
@@ -206,10 +214,20 @@ export function startCable() {
   // already over the hero when this runs counts too.)
   ['pointerenter', 'pointerdown', 'touchstart'].forEach((t) => hero.addEventListener(t, start, { passive: true, once: true }));
   if (hero.matches(':hover')) start();
-  // Otherwise once the page has settled; on a touch screen (no pointer to
-  // wait for) as soon as the main thread is idle after load.
-  if (touch) loaded.then(idle).then(start);
-  else loaded.then(stirred).then(still300).then(idle).then(start);
+  // Touch screens: the first touch or scroll, anywhere. Otherwise (a mouse)
+  // once the page has settled.
+  if (touch) {
+    const first = () => { ['touchstart', 'scroll'].forEach((t) => removeEventListener(t, first, true)); start(); };
+    ['touchstart', 'scroll'].forEach((t) => addEventListener(t, first, { capture: true, passive: true }));
+    // A touch or scroll that came before this script ran (index.html notes it).
+    if (window.__vaStirred) first();
+    // Meanwhile, at idle, the set-up that can't be split (the WebGL context,
+    // ~150 ms in WebKit) and the braid texture, so that first scroll stays smooth.
+    loaded.then(idle).then(() => {
+      if (state.off || started) return;
+      import('./cable/cable.js').then(({ prewarmCable }) => { if (!started) prewarmCable(hero, pickTier()); }).catch(() => {});
+    });
+  } else loaded.then(stirred).then(still300).then(idle).then(start);
   wide.addEventListener('change', () => { if (!state.off) { tries = 0; mount(); } });
   return handle();
 }
