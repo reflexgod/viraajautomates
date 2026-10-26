@@ -75,8 +75,8 @@ const rowBad = rows.filter((r) => {
 report('Service titles open a preview, never a link; each row has exactly one call to action', rows.length === 4 && rowBad.length === 0, rowBad.join(' | '));
 report('FAQ "Is my customers\' data safe?" names the AI service and the automation server', index.includes('Requests are saved in your own Google Sheet and inbox. To reply, messages pass through the AI service and the automation server I run. Riya never gives a diagnosis or fees.'));
 report('Privacy notice names the AI service and the automation server as processors', /AI service and the automation server I run\. Both act as processors/.test(readFileSync('public/privacy.html', 'utf8')));
-// Rounds 4–6 (owner, 26 Oct 2026): the hero promise; the Plug-in button as the one call to action.
-report('Hero H1 is the promise, not the name', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Get found on Google\.<\/span><\/span>\s*<span class="line-mask"><span[^>]*>Answer website enquiries even after hours\.<\/span><\/span>\s*<\/h1>/.test(index));
+// Round 7 (owner, 26 Oct 2026): the hero is the name, a two-line sub-line and the Plug-in button.
+report('Hero H1 is the name, on one line', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Viraaj Automates<\/span><\/span>\s*<\/h1>/.test(index));
 // Round 6 (owner, 26 Oct 2026): the Plug-in button is the one call to action, everywhere.
 const PLUG_MSG = 'Hi Viraaj, saw your website. Can you do a free check for my business?';
 const PLUG_HREF = `https://wa.me/919653375679?text=${encodeURIComponent(PLUG_MSG)}`;
@@ -85,7 +85,9 @@ const plugCount = Object.fromEntries(Object.entries(pages6).map(([p, t]) => [p, 
 const plugBad = Object.entries(pages6).flatMap(([p, t]) => [...t.matchAll(/<a class="plugin__btn"([^>]*)>/g)].filter((m) => !m[1].includes(`href="${PLUG_HREF}"`) || !m[1].includes('aria-label="Check my business on WhatsApp"') || / target=/.test(m[1])).map(() => p));
 report('The Plug-in button everywhere "Check my business" was: hero, menu, Free check, footer; case study menu, band, footer; 404 (same tab, its own message, aria-label)', plugCount['/'] === 4 && plugCount['/work/smile-dental/'] === 3 && plugCount['/404.html'] === 1 && plugBad.length === 0 && !/>Check my business <span class="btn__arrow"/.test(copy), `${JSON.stringify(plugCount)} ${plugBad.join(' ')}`);
 const heroCopy = index.slice(index.indexOf('<div class="hero__copy"'), index.indexOf('<div class="hero__strip"'));
-report('Hero holds only the H1, the sub-line, the Plug-in button and one micro line', !/hero__label|compose|hero__link|<input/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy) && (heroCopy.match(/<p class="plugin__micro t-tag">Free · on WhatsApp · within one working day<\/p>/g) || []).length === 1 && heroCopy.includes('for clinics and businesses in Mumbai and Pune.'));
+const heroKids = [...heroCopy.matchAll(/\n {6}<(\w+) class="([\w-]+)/g)].map((m) => m[2]).join();
+report('Hero holds only "( Mumbai · Pune )", the H1, the sub-line and the Plug-in button; "Free · on WhatsApp…" is in its bubble', heroKids === 'hero__label,hero__title,hero__sub,plugin' && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
+  && heroCopy.includes('>Mumbai · Pune<') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.') && heroCopy.includes('<span class="plugin__bubble-meta">Free · on WhatsApp · within one working day</span><span class="plugin__bubble-tap">Tap again to open WhatsApp</span>'), heroKids);
 const checkSec = index.slice(index.indexOf('id="check"'), index.indexOf('</section>', index.indexOf('id="check"')));
 report('Free check: the report teaser (statement and three steps) static, no field; the Plug-in button', !/<input|data-compose|data-report|unlock/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec));
 report('No "Get my free check", no boxed arrows, no composer left', !/Get my free check|btn__box|btn--plug|compose__/.test(copy) && !existsSync('public/js/compose.js'));
@@ -321,6 +323,29 @@ await checkHow({ browser, base: BASE, report });
     res6.push([`${w} ${sel}`, /is-open/.test(first) && !/is-cord/.test(first) && (!m || /is-armed/.test(first)) && look.bubble === 'visible' && connected && ms >= 430 && ms < 1000 && sent.includes(MSG) && look.h >= 56 && look.w >= 280 && look.w <= 310 && look.font === 'Inter' && look.weight === '500' && look.size === '18px' && look.radius === '4px' && look.socket !== 'none', `${m ? 'tap' : 'hover'}: ${first.replace('plugin ', '')}; ${look.w}×${look.h} ${look.font} ${look.weight} ${look.size}; connected ${connected}; WhatsApp after ${ms} ms`]);
     await ctx.close();
   }
+  // The hero's bubble: above the button on desktop, below it on phones; never on the name or the sub-line.
+  const bub = [];
+  for (const [w, h] of [[1440, 900], [375, 812], [360, 740]]) {
+    const m = w < 768;
+    const ctx = await fresh({ viewport: { width: w, height: h }, isMobile: m, hasTouch: m });
+    await stub(ctx);
+    const page = await ctx.newPage();
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    await page.waitForTimeout(1500);
+    const b = await page.locator('.hero .plugin__btn').boundingBox();
+    if (m) await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); else await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 4 });
+    await page.waitForTimeout(800);
+    const g = await page.evaluate(() => {
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      const bubble = r('.hero .plugin__bubble'), btn = r('.hero .plugin__btn'), h1 = r('.hero__title'), sub = r('.hero__sub'), hero = r('.hero');
+      const hit = (a, c) => a.left < c.right && c.left < a.right && a.top < c.bottom && c.top < a.bottom;
+      const tap = document.querySelector('.hero .plugin__bubble-tap');
+      return { below: bubble.top >= btn.bottom, above: bubble.bottom <= btn.top, clear: !hit(bubble, h1) && !hit(bubble, sub), inside: bubble.top >= 0 && bubble.bottom <= Math.min(hero.bottom, innerHeight), tap: getComputedStyle(tap).display !== 'none', vis: getComputedStyle(document.querySelector('.hero .plugin__bubble')).visibility };
+    });
+    bub.push([(m ? g.below && g.tap : g.above && !g.tap) && g.clear && g.inside && g.vis === 'visible', `${w}: ${JSON.stringify(g)}`]);
+    await ctx.close();
+  }
+  report('Hero bubble: above the button on desktop; below it on phones with "Tap again" as its last line; never on the name or sub-line; on screen', bub.every((r) => r[0]), bub.map((r) => r[1]).join(' | '));
   report('Plug-in button (2D plug): hover or first tap shows the message; click or second tap connects, then WhatsApp in this tab about 450 ms later', res6.every((r) => r[1]), res6.map((r) => `${r[0]}: ${r[2]}`).join(' | '));
   // Reduced motion: a plain link with an arrow, no socket, straight to WhatsApp.
   const rc = await fresh({ reducedMotion: 'reduce' });
