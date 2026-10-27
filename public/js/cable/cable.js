@@ -462,6 +462,9 @@ export async function createCable(hero, { frame: name, tier, still = null, lift 
   // What is under p: the plug (held by its end, keeping the offset so it
   // doesn't jump) or the nearest point of the cord. Null if neither.
   function hit(p, reach = GRAB_PX) {
+    // Nothing until the first draw: before it plugSpan is all zeros, and a zero
+    // direction puts every point "on the plug" (GRAB over the name, a press anywhere takes it).
+    if (!ready) return null;
     const dx = plugSpan.dx, dy = plugSpan.dy;
     const along = (p.x - plugSpan.x) * dx + (p.y - plugSpan.y) * dy;
     if (along > -R && along < PLUG_LEN) {
