@@ -602,3 +602,11 @@
 }
 .footer__base a { display: inline-flex; align-items: center; min-height: 44px; color: var(--cream-72); }
 .footer__base a:hover { color: var(--cream); }
+
+/* The Riya row's static preview (this copy of the site shows screenshots of Riya
+   instead of linking the demo site): two chat screenshots side by side. */
+.riya-shots { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 12px; max-width: 34rem; margin: 14px 0 8px; }
+.riya-shots img { display: block; width: 100%; height: auto; border-radius: var(--r-img); box-shadow: var(--shadow-tile); }
+.riya-shots figcaption { grid-column: 1 / -1; font-family: var(--font-mono); font-size: var(--fs-fine); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-55); }
+.row__proof .btn { margin-top: 4px; }
+.riya-shots ~ .row__micro { margin-top: 8px; }
