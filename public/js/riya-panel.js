@@ -5,7 +5,7 @@
 // the socket (a circle, 0.55 s); the cord fades. Close: the panel shrinks back
 // into the socket (0.4 s) and the cord retracts to the link. Reduced motion: a
 // 0.2 s fade. Talks to the chat webhook with fetch: one POST per message.
-const ENDPOINT = 'https://chat.viraajautomates.tech/webhook/36a7ae43-365d-4cc8-b5bc-33d197384391/chat';
+const ENDPOINT = 'https://chat.svayra.com/webhook/36a7ae43-365d-4cc8-b5bc-33d197384391/chat';
 const WHATSAPP = 'https://wa.me/919653375679?text=Hi%20Viraaj%2C%20saw%20your%20website.%20Can%20I%20get%20the%20free%20report%20for%20my%20business%3F';
 const CHIPS = ['Saturday checkup ka slot milega?', 'What are your timings?', 'Kal 2 baje appointment chahiye'];
 const TIMEOUT = 20000, GAP = 2000, LIMIT = 30;   // 20 s per reply; one message per 2 s, 30 per visit
@@ -44,7 +44,7 @@ function build() {
 </header>
 <div class="riya__log" aria-live="polite" data-lenis-prevent><div class="riya__chips"></div></div>
 <form class="riya__form"><label class="sr-only" for="riya-input">Message Riya</label><input class="riya__input" id="riya-input" maxlength="500" autocomplete="off" enterkeyhint="send" placeholder="Message Riya…"><button class="riya__send" type="submit" aria-label="Send">→</button></form>
-<a class="riya__demo" href="https://demo.viraajautomates.tech/" target="_blank" rel="noopener">Open the full demo clinic site ↗</a>
+<a class="riya__demo" href="https://demo.svayra.com/" target="_blank" rel="noopener">Open the full demo clinic site ↗</a>
 </section>
 <svg class="riya__cord" aria-hidden="true"></svg>`;
   document.body.append(root);

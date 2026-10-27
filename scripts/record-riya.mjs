@@ -16,7 +16,7 @@ for (const [w, h, mobile] of [[1440, 900, false], [375, 812, true]]) {
   rmSync(TMP, { recursive: true, force: true });
   mkdirSync(TMP, { recursive: true });
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: 1 });
-  await ctx.route('https://chat.viraajautomates.tech/**', (r) => setTimeout(() => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ output: 'Namaste! Saturday morning ka slot mil jayega. Aapka naam bata dijiye?' }) }), 900));
+  await ctx.route('https://chat.svayra.com/**', (r) => setTimeout(() => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ output: 'Namaste! Saturday morning ka slot mil jayega. Aapka naam bata dijiye?' }) }), 900));
   const page = await ctx.newPage();
   await page.goto('http://localhost:4173/', { waitUntil: 'load' });
   await page.waitForFunction(() => document.documentElement.classList.contains('motion'), null, { timeout: 8000 }).catch(() => {});

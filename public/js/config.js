@@ -4,7 +4,7 @@
 // without JavaScript); docs/build-notes.md lists every place.
 // ============================================================
 export const SITE = {
-  domain: 'https://viraajautomates.tech',
+  domain: 'https://svayra.com',
   email: 'viraaj.automates@gmail.com',
   whatsapp: '919653375679',
   whatsappDisplay: '+91 96533 75679',

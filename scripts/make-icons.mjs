@@ -1,5 +1,5 @@
 // Favicons from the code-made mark (spec 5 and 10.6):
-//   public/favicon.svg          mark in chalk on the --ground rounded square, dot in chalk
+//   public/favicon.svg          the mark: the --ground rounded square, the S in chalk
 //   public/favicon.ico          32 px (a PNG inside an ICO wrapper)
 //   public/apple-touch-icon.png 180 px
 // Run with: npm run icons
@@ -8,14 +8,16 @@ import sharp from 'sharp';
 
 const GROUND = "#2E1A22", CHALK = "#F5EDE2";
 const mark = readFileSync('public/logo/mark.svg', 'utf8');
-const body = mark.match(/<path[^>]*\/>/)[0].replace('<path', `<path fill="${CHALK}"`);
-const dot = mark.match(/<circle[^>]*\/>/)[0].replace('class="va-dot"', `fill="${CHALK}"`);
+// The mark's path is the square (up to the first Z), then the S.
+const d = mark.match(/<path[^>]* d="([^"]*)"/)[1];
+const letter = d.slice(d.indexOf('Z') + 1);
 
-// The mark's viewBox is "0 -2 36 34"; centre it in a 64 x 64 tile.
+// The mark's viewBox is "0 0 32 32": drawn at 2x it fills the 64 x 64 tile.
+// The S is drawn in chalk rather than cut out, so it reads on dark tabs too.
 const icon = (radius) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
   `<rect width="64" height="64" rx="${radius}" fill="${GROUND}"/>` +
-  `<g transform="translate(14 17) scale(1)">${body}${dot}</g></svg>`;
+  `<path transform="scale(2)" fill="${CHALK}" d="${letter}"/></svg>`;
 
 writeFileSync('public/favicon.svg', icon(12) + '\n');
 

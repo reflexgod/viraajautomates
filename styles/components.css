@@ -81,7 +81,7 @@
   padding-inline: 8px;
   color: var(--cream);
 }
-.nav__mark svg { height: 28px; width: auto; aspect-ratio: var(--monogram-ratio, 1.6); }
+.nav__mark svg { height: 26px; width: auto; aspect-ratio: var(--monogram-ratio, 1.6); }
 .nav__btn:focus-visible, .nav__mark:focus-visible { outline-color: var(--cream); outline-offset: -2px; }
 
 /* Two-line menu icon; the lower bar shortens on hover, a circled x when open */

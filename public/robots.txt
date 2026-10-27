@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://viraajautomates.tech/sitemap.xml
+Sitemap: https://svayra.com/sitemap.xml

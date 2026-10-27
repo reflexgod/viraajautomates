@@ -1,8 +1,8 @@
-// Builds the temporary code-made logo (spec section 5).
+// Builds the code-made logo (spec section 5).
 // Text is converted to outlines, so the SVGs look the same without the font.
 // Writes:
-//   public/logo/mark.svg       VA monogram + status dot
-//   public/logo/wordmark.svg   "Viraaj Automates"
+//   public/logo/mark.svg       rounded square with the S knocked out
+//   public/logo/wordmark.svg   "Svayra"
 // and refreshes the inline <symbol> sprite between the
 // <!-- logo:start --> and <!-- logo:end --> markers in the HTML pages.
 // Run with: npm run logo
@@ -50,71 +50,43 @@ function toD(path) {
   }).join('');
 }
 
-/* ---------- Mark: 32 x 32 square, 4-unit corners, VA knocked out ---------- */
-// The top-right corner is notched by a circle (r 6) around the status dot (r 4.5),
-// which leaves the 1.5-unit gap between dot and square.
-const DOT = { cx: 29, cy: 3, r: 4.5 };
-const NOTCH_R = DOT.r + 1.5;
-const dx = Math.sqrt(NOTCH_R ** 2 - DOT.cy ** 2);   // where the notch meets the top edge
-const dy = Math.sqrt(NOTCH_R ** 2 - (32 - DOT.cx) ** 2); // where it meets the right edge
-const square =
-  `M4 0H${r(DOT.cx - dx)}A${NOTCH_R} ${NOTCH_R} 0 0 0 32 ${r(DOT.cy + dy)}` +
-  'V28A4 4 0 0 1 28 32H4A4 4 0 0 1 0 28V4A4 4 0 0 1 4 0Z';
+/* ---------- Mark: 32 x 32 rounded square, S knocked out ---------- */
+const square = 'M4 0H28A4 4 0 0 1 32 4V28A4 4 0 0 1 28 32H4A4 4 0 0 1 0 28V4A4 4 0 0 1 4 0Z';
 
-// Size "VA" so the caps are about 17 units tall, then centre it optically.
+// Size the S so its cap is about 20 units tall, then centre it.
 const capH = font.tables.os2.sCapHeight / font.unitsPerEm;
-const size = 17 / capH;
-const vaPath = textPath('VA', 0, 0, size);
-const bb = vaPath.getBoundingBox();
-const ox = (32 - (bb.x2 - bb.x1)) / 2 - bb.x1 - 0.6; // nudge left, away from the dot
-const oy = (32 - (bb.y2 - bb.y1)) / 2 - bb.y1 + 0.4;
-const va = toD(textPath('VA', ox, oy, size));
-const markBody = square + va; // evenodd turns the letters into holes
-const MARK_VB = '0 -2 36 34';
+const size = 20 / capH;
+const sb = textPath('S', 0, 0, size).getBoundingBox();
+const ox = (32 - (sb.x2 - sb.x1)) / 2 - sb.x1;
+const oy = (32 - (sb.y2 - sb.y1)) / 2 - sb.y1;
+const markBody = square + toD(textPath('S', ox, oy, size)); // evenodd turns the letter into a hole
+const MARK_VB = '0 0 32 32';
 
-/* ---------- Monogram: the letters alone, for the nav bar ---------- */
-// "VA" with the dot sitting off the A's shoulder, like the mark's.
-const MS = 40;
-const mPath = textPath('VA', 0, 0, MS);
-const mb = mPath.getBoundingBox();
-const MONO_DOT = { cx: r(mb.x2 + 3.2), cy: r(mb.y1 + 2.6), r: 2.6 };
-const monogram = toD(mPath);
-const MONO_VB = `${r(mb.x1 - 0.5)} ${r(mb.y1 - 0.5)} ${r(MONO_DOT.cx + MONO_DOT.r - mb.x1 + 1)} ${r(mb.y2 - mb.y1 + 1)}`;
-
-/* ---------- Wordmark ---------- */
-const WS = 44; // design size in units
-const vPath = textPath('Viraaj', 0, 0, WS);
-const space = font.charToGlyph(' ').advanceWidth / font.unitsPerEm * WS;
-const vAdvance = vPath.advance;
-const aPath = textPath('Automates', vAdvance + space, 0, WS);
-const b1 = vPath.getBoundingBox(), b2 = aPath.getBoundingBox();
-const x0 = Math.min(b1.x1, b2.x1), y0 = Math.min(b1.y1, b2.y1);
-const x1 = Math.max(b1.x2, b2.x2), y1 = Math.max(b1.y2, b2.y2);
-const WORD_VB = `${r(x0 - 0.5)} ${r(y0 - 0.5)} ${r(x1 - x0 + 1)} ${r(y1 - y0 + 1)}`;
-const viraaj = toD(vPath);
-const automates = toD(aPath);
+/* ---------- Wordmark: "Svayra", for the nav bar ---------- */
+// The nav uses it under the old symbol id va-monogram, so the pages need no change.
+const WS = 40; // design size in units
+const wPath = textPath('Svayra', 0, 0, WS);
+const wb = wPath.getBoundingBox();
+const word = toD(wPath);
+const WORD_VB = `${r(wb.x1 - 0.5)} ${r(wb.y1 - 0.5)} ${r(wb.x2 - wb.x1 + 1)} ${r(wb.y2 - wb.y1 + 1)}`;
+const [, , ww, wh] = WORD_VB.split(' ').map(Number);
 
 /* ---------- Standalone files ---------- */
 const head = '<svg xmlns="http://www.w3.org/2000/svg"';
 writeFileSync('public/logo/mark.svg',
-  `${head} viewBox="${MARK_VB}" fill="currentColor"><title>Viraaj Automates</title>` +
-  `<path fill-rule="evenodd" d="${markBody}"/>` +
-  `<circle class="va-dot" cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}"/></svg>\n`);
+  `${head} viewBox="${MARK_VB}" fill="currentColor"><title>Svayra</title>` +
+  `<path fill-rule="evenodd" d="${markBody}"/></svg>\n`);
 writeFileSync('public/logo/wordmark.svg',
-  `${head} viewBox="${WORD_VB}" fill="currentColor"><title>Viraaj Automates</title>` +
-  `<path d="${viraaj}"/><path fill-opacity=".68" d="${automates}"/></svg>\n`);
+  `${head} viewBox="${WORD_VB}" fill="currentColor"><title>Svayra</title>` +
+  `<path d="${word}"/></svg>\n`);
 
 /* ---------- Inline sprite for the HTML pages ---------- */
-// The dot reads --va-dot (currentColor unless a page sets it).
 const sprite =
   `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">` +
-  `<symbol id="va-mark" viewBox="${MARK_VB}"><path fill="currentColor" fill-rule="evenodd" d="${markBody}"/>` +
-  `<circle cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}" style="fill:var(--va-dot,currentColor)"/></symbol>` +
-  `<symbol id="va-monogram" viewBox="${MONO_VB}"><path fill="currentColor" d="${monogram}"/>` +
-  `<circle cx="${MONO_DOT.cx}" cy="${MONO_DOT.cy}" r="${MONO_DOT.r}" style="fill:var(--va-dot,currentColor)"/></symbol>` +
-  `<symbol id="va-wordmark" viewBox="${WORD_VB}"><path fill="currentColor" d="${viraaj}"/>` +
-  `<path fill="currentColor" fill-opacity=".68" d="${automates}"/></symbol></svg>` +
-  `<style>:root{--wordmark-ratio:${r((x1 - x0 + 1) / (y1 - y0 + 1))};--monogram-ratio:${r(MONO_VB.split(" ")[2] / MONO_VB.split(" ")[3])}}</style>`;
+  `<symbol id="va-mark" viewBox="${MARK_VB}"><path fill="currentColor" fill-rule="evenodd" d="${markBody}"/></symbol>` +
+  `<symbol id="va-monogram" viewBox="${WORD_VB}"><path fill="currentColor" d="${word}"/></symbol>` +
+  `<symbol id="va-wordmark" viewBox="${WORD_VB}"><path fill="currentColor" d="${word}"/></symbol></svg>` +
+  `<style>:root{--wordmark-ratio:${r(ww / wh)};--monogram-ratio:${r(ww / wh)}}</style>`;
 
 for (const page of ['public/index.html', 'public/privacy.html', 'public/404.html', 'public/work/smile-dental/index.html']) {
   if (!existsSync(page)) continue;
@@ -125,5 +97,4 @@ for (const page of ['public/index.html', 'public/privacy.html', 'public/404.html
   console.log('sprite updated in', page);
 }
 
-const [, , ww, wh] = WORD_VB.split(' ').map(Number);
 console.log(`mark viewBox ${MARK_VB}; wordmark viewBox ${WORD_VB} (aspect ${r(ww / wh)})`);

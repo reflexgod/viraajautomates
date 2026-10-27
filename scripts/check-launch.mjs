@@ -30,17 +30,17 @@ report('No "Photo coming", "placeholder", "TODO", "lorem" in the site files', hi
 const html = files.filter((f) => f.endsWith('.html'));
 report('No noindex anywhere', !html.some((f) => /noindex/i.test(readFileSync(f, 'utf8'))));
 const robots = readFileSync('public/robots.txt', 'utf8');
-report('robots.txt allows all and lists the sitemap', /User-agent: \*/i.test(robots) && !/Disallow: \/\s*$/m.test(robots) && /Sitemap: https:\/\/viraajautomates\.tech\/sitemap\.xml/.test(robots), robots.replace(/\n/g, ' | '));
+report('robots.txt allows all and lists the sitemap', /User-agent: \*/i.test(robots) && !/Disallow: \/\s*$/m.test(robots) && /Sitemap: https:\/\/svayra\.com\/sitemap\.xml/.test(robots), robots.replace(/\n/g, ' | '));
 const sitemap = readFileSync('public/sitemap.xml', 'utf8');
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-report('sitemap.xml uses https://viraajautomates.tech', locs.length > 0 && locs.every((u) => u.startsWith('https://viraajautomates.tech/')), locs.join(' '));
+report('sitemap.xml uses https://svayra.com', locs.length > 0 && locs.every((u) => u.startsWith('https://svayra.com/')), locs.join(' '));
 const index = readFileSync('public/index.html', 'utf8');
 const urls = [...index.matchAll(/(?:rel="canonical" href|property="og:(?:url|image)" content|name="twitter:image" content)="([^"]+)"/g)].map((m) => m[1]);
-report('Canonical and OG URLs use https://viraajautomates.tech', urls.length >= 3 && urls.every((u) => u.startsWith('https://viraajautomates.tech/')), urls.join(' '));
-report('CNAME contains viraajautomates.tech', readFileSync('public/CNAME', 'utf8').trim() === 'viraajautomates.tech');
-report('sitemap.xml lists the case study', locs.includes('https://viraajautomates.tech/work/smile-dental/'));
+report('Canonical and OG URLs use https://svayra.com', urls.length >= 3 && urls.every((u) => u.startsWith('https://svayra.com/')), urls.join(' '));
+report('CNAME contains svayra.com', readFileSync('public/CNAME', 'utf8').trim() === 'svayra.com');
+report('sitemap.xml lists the case study', locs.includes('https://svayra.com/work/smile-dental/'));
 const caseHtml = readFileSync('public/work/smile-dental/index.html', 'utf8');
-const caseMeta = ['<title>', 'name="description"', 'rel="canonical" href="https://viraajautomates.tech/work/smile-dental/"', 'property="og:url" content="https://viraajautomates.tech/work/smile-dental/"', 'property="og:title"', 'property="og:image"'];
+const caseMeta = ['<title>', 'name="description"', 'rel="canonical" href="https://svayra.com/work/smile-dental/"', 'property="og:url" content="https://svayra.com/work/smile-dental/"', 'property="og:title"', 'property="og:image"'];
 report('Case study has its own title, description, canonical and OG tags', caseMeta.every((m) => caseHtml.includes(m)), caseMeta.filter((m) => !caseHtml.includes(m)).join(' '));
 // Never reveal the method or the stack, anywhere a visitor can load.
 const siteText = files.map((f) => [f, readFileSync(f, 'utf8')]);
@@ -52,7 +52,7 @@ report('No stack or method named in the site (tool names, test links)', methodHi
 // The demo site is linked once (owner, 26 Oct 2026, round 5): the Riya row's "Chat with Riya now ↗"; nowhere else.
 // Round 14 (owner, 27 Oct 2026): every "Chat with Riya now" link opens the Riya panel; the demo site is only
 // their no-JS fallback (new tab) and the panel's "Open the full demo clinic site ↗".
-const demoHost = ['demo', 'viraajautomates', 'tech'].join('.');
+const demoHost = ['demo', 'svayra', 'com'].join('.');
 const riyaDemo = `https://${demoHost}/?riya=open`;
 const demoHits = siteText.flatMap(([f, t]) => t.split(demoHost).slice(1).map(() => f));
 const riyaRow = index.split('<li class="row" data-row>')[3] || '';
@@ -89,7 +89,7 @@ report('Service titles open a preview, never a link; each row has exactly one ca
 report('FAQ "Is my customers\' data safe?" names the AI service and the automation server', index.includes('Requests are saved in your own Google Sheet and inbox. To reply, messages pass through the AI service and the automation server I run. Riya never gives a diagnosis or fees.'));
 report('Privacy notice names the AI service and the automation server as processors', /AI service and the automation server I run\. Both act as processors/.test(readFileSync('public/privacy.html', 'utf8')));
 // Round 7 (owner, 26 Oct 2026): the hero is the name, a two-line sub-line and the Plug-in button.
-report('Hero H1 is the name, on one line', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Viraaj Automates<\/span><\/span>\s*<\/h1>/.test(index));
+report('Hero H1 is the name, on one line', /<h1 class="hero__title[^>]*>\s*<span class="line-mask"><span[^>]*>Svayra<\/span><\/span>\s*<\/h1>/.test(index));
 // Rounds 6 and 8 (owner, 26 Oct 2026): the Plug-in button is the one call to action, everywhere:
 // "Get my free report" ("Unlock my free report" under the report teaser), one message.
 const PLUG_MSG = 'Hi Viraaj, saw your website. Can I get the free report for my business?';
@@ -106,7 +106,7 @@ report('Each Plug-in button has the mini WhatsApp chat (Viraaj, the message, tim
 const heroCopy = index.slice(index.indexOf('<div class="hero__copy"'), index.indexOf('<div class="hero__strip"'));
 const heroKids = [...heroCopy.matchAll(/\n {6}<(\w+) class="([\w-]+)/g)].map((m) => m[2]).join();
 report('Hero holds only the H1, the sub-line, the Plug-in button and the small "Chat with Riya now" link (no place label); Mumbai and Pune stay in the description and structured data', heroKids === 'hero__title,hero__sub,plugin,hero__riya' && /class="hero__riya"[^>]*><a class="proof riya-link"[^>]*data-riya/.test(heroCopy) && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
-  && !heroCopy.includes('Mumbai · Pune') && /name="description" content="[^"]*Mumbai and Pune/.test(index) && index.includes('"areaServed": ["Mumbai", "Pune"]') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.'), heroKids);
+  && !heroCopy.includes('Mumbai · Pune') && /name="description" content="[^"]*Mumbai and Pune/.test(index) && index.includes('"areaServed": ["Mumbai", "Pune"]') && heroCopy.includes('Helping businesses get found on Google<br> and answer enquiries, even after hours.'), heroKids);
 const checkSec = index.slice(index.indexOf('id="check"'), index.indexOf('</section>', index.indexOf('id="check"')));
 report('Free report: the report teaser (statement and three steps) static, no field; "Unlock my free report"', !/<input|data-compose|data-report/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec) && checkSec.includes('<span class="plugin__text">Unlock my free report</span>'));
 report('No "Get my free check", no boxed arrows, no composer left', !/Get my free check|btn__box|btn--plug|compose__/.test(copy) && !existsSync('public/js/compose.js'));
@@ -129,7 +129,7 @@ const fresh = (opts = {}) => browser.newContext({ viewport: { width: 1440, heigh
     await page.goto(BASE + path, { waitUntil: 'load' });
     await page.waitForTimeout(800);
     const foot = await page.evaluate(() => [...document.querySelectorAll('footer p')].map((p) => p.textContent.trim()).find((t) => t.startsWith('©')));
-    report(`Footer line on ${path}`, foot === '© 2026 Nexoraa. Viraaj Automates is a Nexoraa brand.', foot);
+    report(`Footer line on ${path}`, foot === '© 2026 Svayra.', foot);
     // Every image has a source that loads, with width and height set (below the fold: lazy)
     const imgs = await page.evaluate(() => [...document.querySelectorAll('img')].map((i) => ({ src: i.getAttribute('src'), w: i.getAttribute('width'), h: i.getAttribute('height'), lazy: i.loading, top: i.getBoundingClientRect().top + scrollY })));
     const bad = imgs.filter((i) => !i.src || !i.w || !i.h || (i.top > 1200 && i.lazy !== 'lazy'));

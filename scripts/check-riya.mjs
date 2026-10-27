@@ -27,14 +27,14 @@ const chrome = () => chromium.launch({ executablePath: 'C:/Program Files/Google/
 // request is forwarded from here (the reply still comes from the live endpoint).
 async function forward(ctx, base) {
   if (!/localhost|127\.0\.0\.1/.test(base)) return;
-  await ctx.route('https://chat.viraajautomates.tech/**', async (r) => {
+  await ctx.route('https://chat.svayra.com/**', async (r) => {
     // Unreachable (no DNS, server down): the request fails as it would in the page, and the check reports it.
-    const res = await r.fetch({ headers: { ...r.request().headers(), origin: 'https://viraajautomates.tech' } }).catch(() => null);
+    const res = await r.fetch({ headers: { ...r.request().headers(), origin: 'https://svayra.com' } }).catch(() => null);
     if (!res) { await r.abort('failed'); return; }
     await r.fulfill({ response: res, headers: { ...res.headers(), 'access-control-allow-origin': '*' } });
   });
 }
-const stub = (ctx, reply) => ctx.route('https://chat.viraajautomates.tech/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ output: reply }) }));
+const stub = (ctx, reply) => ctx.route('https://chat.svayra.com/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ output: reply }) }));
 const isOpen = (page) => page.waitForFunction(() => { const r = document.querySelector('.riya'); return r && !r.hidden && document.activeElement && r.contains(document.activeElement); }, null, { timeout: 8000 }).then(() => true, () => false);
 const ready = (page) => page.waitForFunction(() => document.documentElement.classList.contains('motion') || !document.documentElement.classList.contains('js'), null, { timeout: 8000 }).catch(() => {});
 
@@ -90,7 +90,7 @@ export async function checkRiya({ base = 'http://localhost:4173', report }) {
   // ---------- Blocked endpoint: the WhatsApp line ----------
   {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-    await ctx.route('https://chat.viraajautomates.tech/**', (r) => r.abort());
+    await ctx.route('https://chat.svayra.com/**', (r) => r.abort());
     const page = await ctx.newPage();
     await page.goto(base + '/', { waitUntil: 'load' });
     await ready(page);

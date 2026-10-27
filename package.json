@@ -2,7 +2,7 @@
   "name": "viraajautomates",
   "private": true,
   "type": "module",
-  "description": "Dev tools for the Viraaj Automates static site. Nothing here is loaded by the live site.",
+  "description": "Dev tools for the Svayra static site. Nothing here is loaded by the live site.",
   "scripts": {
     "serve": "node scripts/serve.mjs",
     "photo": "node scripts/process-photo.mjs",

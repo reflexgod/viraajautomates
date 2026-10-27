@@ -1,4 +1,4 @@
-// Viraaj Automates: home page script.
+// Svayra: home page script.
 // Everything here is an enhancement: the page reads and every link works without it.
 import { setupMotion, savedScroll, restoreScroll, prefetchOnHover, riyaLinks } from './core.js';
 import { initClock } from './clock.js';
