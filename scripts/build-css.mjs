@@ -1,7 +1,7 @@
 // Joins the stylesheets in styles/ into one minified file, public/css/site.css,
 // the only stylesheet every page loads (one request, nothing render-blocking
 // waits on a second file). styles/riya.css is built on its own into
-// public/css/riya.css: the Riya panel loads it when it is first opened.
+// public/css/riya.css: it loads with the Riya panel, after the page (js/core.js).
 // Edit styles/*.css, then: npm run css
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';

@@ -1,7 +1,7 @@
 /* ==========================================================================
    Riya: the live chat panel (js/riya-panel.js). Built on its own into
-   public/css/riya.css and loaded only when a "Chat with Riya now" link is
-   first hovered, focused or clicked. Nothing here is on the page at load.
+   public/css/riya.css and loaded beside the panel's script once the page is
+   idle (js/core.js), never with the page itself.
    A braided cord draws from the link to a socket on the panel's edge, the
    plug clicks in, and the panel opens from that socket (a growing circle).
    ========================================================================== */
@@ -35,9 +35,10 @@
   pointer-events: auto;
   outline: none;
 }
-/* Phones: a bottom sheet, 88% of the screen tall. */
+/* Phones: a bottom sheet, 88% of the screen tall. The cord rises through the
+   sheet's place to the socket on its top edge, so the sheet grows over it. */
 @media (max-width: 599px) {
-  .riya__panel { top: auto; left: 0; width: auto; height: 88dvh; border-radius: 10px 10px 0 0; overflow: hidden; }
+  .riya__panel { top: auto; left: 0; width: auto; height: 88dvh; border-radius: 10px 10px 0 0; overflow: hidden; z-index: 1; }
 }
 
 /* The socket the cord plugs into: on the panel's left edge (top edge on a phone). */

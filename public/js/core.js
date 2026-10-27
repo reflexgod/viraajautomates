@@ -58,20 +58,41 @@ export function prefetchOnHover() {
 }
 
 // "Chat with Riya now" links open the Riya panel (js/riya-panel.js, with
-// css/riya.css), fetched the first time one is hovered, focused or touched, so
-// nothing of it loads with the page. Without JS the link opens the demo site.
+// css/riya.css). Both load side by side, after the page's load event: once the
+// page is idle, when a link scrolls near the screen, or on the first hover,
+// focus or touch of one, whichever comes first, so a click never waits on the
+// network. Without JS the link opens the demo site.
 export function riyaLinks(lenis) {
   const links = document.querySelectorAll('[data-riya]');
+  if (!links.length) return;
   let panel = null;
-  const load = () => (panel ||= import('./riya-panel.js'));
+  const sheet = () => new Promise((done) => {
+    const l = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: new URL('../css/riya.css', import.meta.url).href });
+    l.onload = l.onerror = done;
+    document.head.append(l);
+  });
+  const load = () => (panel ||= Promise.all([import('./riya-panel.js'), sheet()]).then(([m]) => m, (e) => { panel = null; throw e; }));
+  const preload = () => load().catch(() => {});
   links.forEach((a) => {
-    ['pointerenter', 'focus', 'touchstart'].forEach((t) => a.addEventListener(t, load, { once: true, passive: true }));
+    ['pointerenter', 'focus', 'touchstart'].forEach((t) => a.addEventListener(t, preload, { once: true, passive: true }));
     a.addEventListener('click', (e) => {
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button > 0) return;
       e.preventDefault();
       load().then((m) => m.openRiya(a, { lenis }), () => location.assign(a.href));
     });
   });
+  const later = () => {
+    if (window.requestIdleCallback) requestIdleCallback(preload, { timeout: 3000 }); else setTimeout(preload, 1500);
+    // Near the screen: 600 px ahead. The first report is where the links start
+    // (the hero's is on screen), so only a link scrolled in later counts.
+    let first = true;
+    const near = new IntersectionObserver((es) => {
+      if (!first && es.some((e) => e.isIntersecting)) { near.disconnect(); preload(); }
+      first = false;
+    }, { rootMargin: '600px 0px' });
+    links.forEach((a) => near.observe(a));
+  };
+  if (document.readyState === 'complete') later(); else addEventListener('load', later, { once: true });
 }
 
 export function setupMotion({ offset = 0 } = {}) {

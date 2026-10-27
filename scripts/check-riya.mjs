@@ -7,7 +7,10 @@
 // - a confirmed booking draws the "Sent to the clinic" stamp;
 // - phones: a bottom sheet about 88% tall; 320 to 1920 px with no sideways scroll;
 // - reduced motion: no cord, a fade; the cursor over the links reads CHAT;
-// - nothing of the panel loads with the page; its JS is under 8 KB gzipped;
+// - nothing of the panel loads before the page's load event; its JS and CSS load
+//   side by side once the page is idle, before any click; its JS is under 8 KB gzipped;
+// - a click shows the backdrop or cord within 100 ms and the panel is ready
+//   (focus in it) within 900 ms, desktop and phone (first tap, no hover);
 // - the chat service's name nowhere in the built HTML, JS or CSS;
 // - Lighthouse, home, mobile: 95 or more (median of 3): checkLighthouse, run first.
 // Screenshots: docs/screenshots/riya-panel/. Part of check-launch.mjs.
@@ -46,6 +49,48 @@ async function sendAndWait(page, text) {
   return (await page.locator('.riya__msg--riya').last().innerText()).trim();
 }
 
+// How long a click on a Riya link takes to answer, timed in the page from the
+// click event: `seen` = the backdrop or cord first painted, `plugged` = the plug
+// is in, `ready` = the panel is open with focus in it (the input with a mouse).
+// A fresh page each time, the link clicked 2 s after load (desktop) or tapped
+// with no hover first (phone). `preloaded`: the panel's files were fetched
+// before the click; `together`: their two requests started together.
+export async function timeRiya(browser, base, { mobile = false } = {}) {
+  const ctx = await browser.newContext(mobile ? { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } : { viewport: { width: 1440, height: 900 } });
+  await stub(ctx, 'Hello!');
+  const page = await ctx.newPage();
+  await page.goto(base + '/', { waitUntil: 'load' });
+  await ready(page);
+  await page.waitForTimeout(2000);
+  const link = page.locator('#services [data-riya]');
+  await link.evaluate((a) => a.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(600);
+  const files = () => page.evaluate(() => performance.getEntriesByType('resource').filter((e) => /riya-panel\.js|riya\.css/.test(e.name)).map((e) => e.startTime));
+  const fetched = (await files()).length;
+  await page.evaluate(() => {
+    const t = window.__riyaT = {};
+    addEventListener('click', (e) => {
+      if (!e.target.closest?.('[data-riya]') || t.click) return;
+      t.click = e.timeStamp;
+      const tick = (now) => {
+        const r = document.querySelector('.riya'), b = r?.querySelector('.riya__backdrop');
+        const at = performance.now() - t.click;
+        if (!t.seen && r && !r.hidden && (+getComputedStyle(b).opacity > 0.02 || r.querySelector('.riya__cord')?.innerHTML)) t.seen = at;
+        if (!t.plugged && r?.classList.contains('is-plugged')) t.plugged = at;
+        if (!t.ready && r && !r.hidden && r.contains(document.activeElement)) t.ready = at;
+        if (!t.ready && at < 8000) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, true);
+  });
+  if (mobile) await link.tap(); else await link.click();
+  await page.waitForFunction(() => window.__riyaT.ready || performance.now() - window.__riyaT.click > 8000, null, { timeout: 12000 });
+  const t = await page.evaluate(() => window.__riyaT);
+  const starts = await files();
+  await ctx.close();
+  return { seen: Math.round(t.seen), plugged: Math.round(t.plugged), ready: Math.round(t.ready), preloaded: fetched === 2, together: starts.length === 2 && Math.abs(starts[0] - starts[1]) < 50 };
+}
+
 export async function checkRiya({ base = 'http://localhost:4173', report }) {
   mkdirSync(SHOTS, { recursive: true });
   const browser = await chrome();
@@ -55,12 +100,11 @@ export async function checkRiya({ base = 'http://localhost:4173', report }) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: mobile, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1 });
     await forward(ctx, base);
     const page = await ctx.newPage();
-    const loadedAtStart = [];
-    page.on('request', (r) => { if (/riya-panel\.js|riya\.css/.test(r.url())) loadedAtStart.push(r.url()); });
     await page.goto(base + path, { waitUntil: 'load' });
     await ready(page);
     await page.waitForTimeout(800);
-    const before = loadedAtStart.length;
+    // Requested before the page's load event finished (the HTML never names them).
+    const before = await page.evaluate(() => { const nav = performance.getEntriesByType('navigation')[0]; return performance.getEntriesByType('resource').filter((e) => /riya-panel\.js|riya\.css/.test(e.name) && e.startTime < nav.loadEventEnd).length; });
     const count = await page.locator('[data-riya]').count();
     const results = [];
     for (let i = 0; i < count; i++) {
@@ -82,7 +126,7 @@ export async function checkRiya({ base = 'http://localhost:4173', report }) {
       const ok = opened && reply && !reply.includes(BREAK) && esc && back && wide <= 0;
       results.push({ where, opened, reply: reply.slice(0, 50), esc, focusBack: back, ok });
     }
-    report(`Riya panel ${path} at ${w}${mobile ? ' (touch)' : ''}: each of the ${count} "Chat with Riya now" links opens it, "hi" gets a live reply, Esc closes it and focus returns to the link; nothing of it loads with the page`,
+    report(`Riya panel ${path} at ${w}${mobile ? ' (touch)' : ''}: each of the ${count} "Chat with Riya now" links opens it, "hi" gets a live reply, Esc closes it and focus returns to the link; nothing of it loads before the page's load event`,
       count >= 2 && results.every((r) => r.ok) && before === 0, JSON.stringify({ loadedWithPage: before, results }));
     await ctx.close();
   }
@@ -196,6 +240,14 @@ export async function checkRiya({ base = 'http://localhost:4173', report }) {
     report('Riya links: the cursor reads CHAT; on hover a plug slides in after the words and a 2 px line draws under them', label.on && /chat/i.test(label.word) && label.plug > 0.9 && label.line !== 'matrix(0, 0, 0, 1, 0, 0)', JSON.stringify(label));
     await c2.close();
   }
+  // ---------- Opening: seen within 100 ms, ready within 900 ms (median of 3) ----------
+  for (const mobile of [false, true]) {
+    const runs = [];
+    for (let i = 0; i < 3; i++) runs.push(await timeRiya(browser, base, { mobile }));
+    const med = (k) => runs.map((r) => r[k]).sort((a, b) => a - b)[1];
+    report(`Riya panel opens at once ${mobile ? 'on a phone (first tap, no hover)' : 'on desktop'}: backdrop or cord within 100 ms of the click, ready within 900 ms (median of 3); its JS and CSS were fetched together before the click`,
+      med('seen') < 100 && med('ready') < 900 && runs.every((r) => r.preloaded && r.together), JSON.stringify({ seen: med('seen'), ready: med('ready'), runs }));
+  }
   await browser.close();
 
   // ---------- Built files: the chat service's name nowhere; the panel's JS budget ----------
@@ -229,7 +281,14 @@ export async function checkLighthouse({ base = 'http://localhost:4173', report }
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   let failed = 0;
   const report = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  ' + detail : ''}`); };
-  const base = process.argv[2] || 'http://localhost:4173';
+  const base = process.argv[2]?.startsWith('http') ? process.argv[2] : 'http://localhost:4173';
+  if (process.argv.includes('--time')) {
+    // Timings only:  node scripts/check-riya.mjs https://svayra.com --time
+    const browser = await chrome();
+    for (const mobile of [false, true]) for (let i = 0; i < 3; i++) console.log(mobile ? 'phone  ' : 'desktop', JSON.stringify(await timeRiya(browser, base, { mobile })));
+    await browser.close();
+    process.exit(0);
+  }
   if (!process.argv.includes('--no-lh')) await checkLighthouse({ base, report });
   await checkRiya({ base, report });
   process.exitCode = failed ? 1 : 0;

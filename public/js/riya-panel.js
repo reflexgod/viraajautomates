@@ -1,8 +1,9 @@
 // Riya, live: the chat panel behind every "Chat with Riya now" link. Loaded
-// (with css/riya.css) on the first hover, focus or click of one (js/core.js).
-// Open: a braided cord draws from the link to a socket on the panel's edge
-// (0.5 s), the plug clicks in (the socket glows), and the panel grows out of
-// the socket (a circle, 0.55 s); the cord fades. Close: the panel shrinks back
+// with css/riya.css once the page is idle (js/core.js), so a click starts it at once.
+// Open (0.76 s): the backdrop and a braided cord start on the click, the cord
+// draws from the link to a socket on the panel's edge (0.3 s), the plug clicks
+// in (the socket glows), and after 60 ms the panel grows out of the socket (a
+// circle, 0.4 s); focus goes in, and the cord fades. Close: the panel shrinks back
 // into the socket (0.4 s) and the cord retracts to the link. Reduced motion: a
 // 0.2 s fade. Talks to the chat webhook with fetch: one POST per message.
 const ENDPOINT = 'https://chat.svayra.com/webhook/36a7ae43-365d-4cc8-b5bc-33d197384391/chat';
@@ -20,11 +21,6 @@ let session = keep('va-riya-session');
 if (!session) keep('va-riya-session', session = crypto.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2));
 let count = +keep('va-riya-count') || 0;
 
-const css = new Promise((done) => {
-  const l = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: new URL('../css/riya.css', import.meta.url).href });
-  l.onload = l.onerror = done;
-  document.head.append(l);
-});
 const el = (tag, cls, text) => Object.assign(document.createElement(tag), cls ? { className: cls } : {}, text != null ? { textContent: text } : {});
 const run = (node, frames, o = {}) => node.animate(frames, { duration: 350, easing: EASE, fill: 'both', ...o }).finished;
 
@@ -135,46 +131,54 @@ function place(link) {
 // The cord hangs a little between the link and the socket; the plug at its end points into the socket.
 function drawCord({ a, s }) {
   const dx = s.x - a.x, low = Math.max(a.y, s.y) + 50 + Math.abs(dx) * 0.08;
-  const c1 = [a.x + dx * 0.33, low], c2 = [a.x + dx * 0.7, low];
+  let c1 = [a.x + dx * 0.33, low], c2 = [a.x + dx * 0.7, low];
+  // Straight up to a phone's sheet: the cord swings out toward the middle and rises into the socket.
+  if (Math.abs(dx) < 40) {
+    const side = a.x < innerWidth / 2 ? 1 : -1;
+    c1 = [a.x + side * 90, low];
+    c2 = [s.x + side * 20, s.y + 160];
+  }
   const d = `M${a.x} ${a.y}C${c1} ${c2} ${s.x} ${s.y}`;
   const deg = (Math.atan2(s.y - c2[1], s.x - c2[0]) * 180) / Math.PI;
-  cord.innerHTML = `<defs><mask id="riya-cord"><path d="${d}" stroke="#fff" stroke-width="12" fill="none" pathLength="1" stroke-dasharray="1 2"/></mask></defs>
+  // The mask in page units: in its default (the path's box) a straight up-and-down cord, a phone's, is 0 wide and hides it all.
+  cord.innerHTML = `<defs><mask id="riya-cord" maskUnits="userSpaceOnUse"><path d="${d}" stroke="#fff" stroke-width="12" fill="none" pathLength="1" stroke-dasharray="1 2"/></mask></defs>
 <g mask="url(#riya-cord)"><path class="core" d="${d}"/><path class="braid" d="${d}"/></g>
 <g class="plug" transform="translate(${s.x} ${s.y}) rotate(${deg})"><g><rect x="-22" y="-5" width="16" height="10" rx="2"/><rect class="pin" x="-6" y="-3.5" width="6" height="2"/><rect class="pin" x="-6" y="1.5" width="6" height="2"/></g></g>`;
   return cord;
 }
 
 export async function openRiya(link, opts = {}) {
-  await css;
   if (!root) build();
   if (open || moving) return;
   moving = true;
   from = link;
   lenis = opts.lenis || null;
   root.hidden = false;
-  lenis?.stop();
-  document.documentElement.style.overflow = 'hidden';
   const back = root.firstChild, g = place(link);
+  // The backdrop and the cord (or the fade) start first, in this frame; then the page stops scrolling.
+  let opened;
   if (reduced) {
-    await Promise.all([back, panel].map((n) => run(n, [{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'linear' })));
-    root.classList.add('is-plugged');
+    opened = Promise.all([back, panel].map((n) => run(n, [{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'linear' })));
   } else {
     const at = `at ${g.s.x - g.P.left}px ${g.s.y - g.P.top}px`, r = Math.hypot(g.P.width, g.P.height) * 1.05;
     panel.style.clipPath = `circle(0px ${at})`;
-    run(back, [{ opacity: 0 }, { opacity: 1 }], { duration: 450 });
+    // One timeline, all started now: the cord (0.3 s), a 60 ms pause, the panel (0.4 s).
+    const CORD = 300, GROW = CORD + 60;
+    run(back, [{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
     const c = drawCord(g);
-    await run(c.querySelector('mask path'), [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 500 });
-    // The plug clicks in: a small bump, and the socket glows.
-    run(c.querySelector('.plug > g'), [{ opacity: 0, transform: 'translateX(-6px)' }, { opacity: 1, transform: 'scale(1.18)', offset: 0.6 }, { opacity: 1, transform: 'none' }], { duration: 260 });
-    root.classList.add('is-plugged');
-    await new Promise((done) => setTimeout(done, 160));
-    const opening = run(panel, [{ clipPath: `circle(0px ${at})` }, { clipPath: `circle(${r}px ${at})` }], { duration: 550 });
-    // Inside: the header lines rise (60 ms apart), then the suggestions drop in one by one.
-    root.querySelectorAll('.riya__mask > span').forEach((n, i) => run(n, [{ transform: 'translateY(110%)' }, { transform: 'none' }], { duration: 600, delay: 120 + i * 60 }));
-    [...chips.children].forEach((n, i) => run(n, [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: 380 + i * 90 }));
-    await opening;
-    run(c, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+    // The plug clicks in as the cord arrives: a small bump, and the socket glows.
+    run(c.querySelector('mask path'), [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: CORD }).then(() => root.classList.add('is-plugged'));
+    run(c.querySelector('.plug > g'), [{ opacity: 0, transform: 'translateX(-6px)' }, { opacity: 1, transform: 'scale(1.18)', offset: 0.6 }, { opacity: 1, transform: 'none' }], { duration: 200, delay: CORD });
+    opened = run(panel, [{ clipPath: `circle(0px ${at})` }, { clipPath: `circle(${r}px ${at})` }], { duration: 400, delay: GROW });
+    // Inside: the header lines rise (50 ms apart), then the suggestions drop in one by one.
+    root.querySelectorAll('.riya__mask > span').forEach((n, i) => run(n, [{ transform: 'translateY(110%)' }, { transform: 'none' }], { duration: 420, delay: GROW + 60 + i * 50 }));
+    [...chips.children].forEach((n, i) => run(n, [{ opacity: 0, transform: 'translateY(-10px)' }, { opacity: 1, transform: 'none' }], { duration: 280, delay: GROW + 160 + i * 60 }));
+    opened.then(() => run(c, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 }));
   }
+  lenis?.stop();
+  document.documentElement.style.overflow = 'hidden';
+  await opened;
+  root.classList.add('is-plugged');
   open = true;
   moving = false;
   (fine ? input : panel).focus({ preventScroll: true });
