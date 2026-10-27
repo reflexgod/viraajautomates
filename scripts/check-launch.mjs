@@ -15,7 +15,9 @@ import { checkPortrait } from './check-portrait.mjs';
 import { checkPlug } from './check-plug.mjs';
 import { checkFidget } from './check-fidget.mjs';
 
-const BASE = 'http://localhost:4173';
+// The pages-mirror copy: run against any address, e.g. node scripts/check-launch.mjs https://viraajautomates.pages.dev
+const BASE = (process.argv[2] || 'http://localhost:4173').replace(/\/$/, '');
+const HOME = 'https://viraajautomates.pages.dev';
 const results = [];
 const report = (name, ok, detail = '') => { results.push([name, ok, detail]); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  ' + detail : ''}`); };
 
@@ -27,19 +29,19 @@ const banned = /photo coming|placeholder|todo|lorem/i;
 const hits = files.flatMap((f) => readFileSync(f, 'utf8').split('\n').map((l, i) => [f, i + 1, l]).filter(([, , l]) => banned.test(l.replace(/\splaceholder="[^"]*"|::placeholder/g, ''))));
 report('No "Photo coming", "placeholder", "TODO", "lorem" in the site files', hits.length === 0, hits.map(([f, n]) => `${f}:${n}`).join(' '));
 const html = files.filter((f) => f.endsWith('.html'));
-report('No noindex anywhere', !html.some((f) => /noindex/i.test(readFileSync(f, 'utf8'))));
+report('noindex on every page (this copy must not compete with the main site)', html.every((f) => readFileSync(f, 'utf8').includes('<meta name="robots" content="noindex">')));
 const robots = readFileSync('public/robots.txt', 'utf8');
-report('robots.txt allows all and lists the sitemap', /User-agent: \*/i.test(robots) && !/Disallow: \/\s*$/m.test(robots) && /Sitemap: https:\/\/viraajautomates\.tech\/sitemap\.xml/.test(robots), robots.replace(/\n/g, ' | '));
+report('robots.txt allows all and lists the sitemap', /User-agent: \*/i.test(robots) && !/Disallow: \/\s*$/m.test(robots) && robots.includes(`Sitemap: ${HOME}/sitemap.xml`), robots.replace(/\n/g, ' | '));
 const sitemap = readFileSync('public/sitemap.xml', 'utf8');
 const locs = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-report('sitemap.xml uses https://viraajautomates.tech', locs.length > 0 && locs.every((u) => u.startsWith('https://viraajautomates.tech/')), locs.join(' '));
+report(`sitemap.xml uses ${HOME}`, locs.length > 0 && locs.every((u) => u.startsWith(`${HOME}/`)), locs.join(' '));
 const index = readFileSync('public/index.html', 'utf8');
 const urls = [...index.matchAll(/(?:rel="canonical" href|property="og:(?:url|image)" content|name="twitter:image" content)="([^"]+)"/g)].map((m) => m[1]);
-report('Canonical and OG URLs use https://viraajautomates.tech', urls.length >= 3 && urls.every((u) => u.startsWith('https://viraajautomates.tech/')), urls.join(' '));
-report('CNAME contains viraajautomates.tech', readFileSync('public/CNAME', 'utf8').trim() === 'viraajautomates.tech');
-report('sitemap.xml lists the case study', locs.includes('https://viraajautomates.tech/work/smile-dental/'));
+report(`Canonical and OG URLs use ${HOME}`, urls.length >= 3 && urls.every((u) => u.startsWith(`${HOME}/`)), urls.join(' '));
+report('No CNAME (this copy is served by Cloudflare Pages)', !existsSync('public/CNAME'));
+report('sitemap.xml lists the case study', locs.includes(`${HOME}/work/smile-dental/`));
 const caseHtml = readFileSync('public/work/smile-dental/index.html', 'utf8');
-const caseMeta = ['<title>', 'name="description"', 'rel="canonical" href="https://viraajautomates.tech/work/smile-dental/"', 'property="og:url" content="https://viraajautomates.tech/work/smile-dental/"', 'property="og:title"', 'property="og:image"'];
+const caseMeta = ['<title>', 'name="description"', `rel="canonical" href="${HOME}/work/smile-dental/"`, `property="og:url" content="${HOME}/work/smile-dental/"`, 'property="og:title"', 'property="og:image"'];
 report('Case study has its own title, description, canonical and OG tags', caseMeta.every((m) => caseHtml.includes(m)), caseMeta.filter((m) => !caseHtml.includes(m)).join(' '));
 // Never reveal the method or the stack, anywhere a visitor can load.
 const siteText = files.map((f) => [f, readFileSync(f, 'utf8')]);
@@ -53,7 +55,11 @@ const demoHost = ['demo', 'viraajautomates', 'tech'].join('.');
 const riyaDemo = `https://${demoHost}/?riya=open`;
 const demoHits = siteText.flatMap(([f, t]) => t.split(demoHost).slice(1).map(() => f));
 const riyaRow = index.split('<li class="row" data-row>')[3] || '';
-report('The demo site is linked only from the Riya row ("Chat with Riya now ↗", new tab)', demoHits.length === 1 && riyaRow.includes(`<a class="proof" href="${riyaDemo}" target="_blank" rel="noopener"`) && riyaRow.includes('>Chat with Riya now <span aria-hidden="true">↗</span>'), demoHits.join(' | '));
+// This copy links no viraajautomates.tech address at all (owner, 27 Oct 2026: the domain is flagged
+// while a review is pending): the Riya row shows two Riya screenshots and "Ask me for a live Riya demo".
+const tech = siteText.filter(([, t]) => /viraajautomates\.tech/i.test(t)).map(([f]) => f);
+report('No viraajautomates.tech address (main domain, demo, chat or any other) anywhere in this copy’s files', tech.length === 0 && demoHits.length === 0, tech.join(' | '));
+report('The Riya row shows two Riya chat screenshots (captioned Demo) and "Ask me for a live Riya demo" (WhatsApp: "Hi Viraaj, I saw Riya on your website. Can I see a live demo?")', (riyaRow.match(/<img src="images\/work\/riya-chat-/g) || []).length === 2 && /<figcaption>[^<]*Demo/.test(riyaRow) && riyaRow.includes('<a class="btn" href="https://wa.me/919653375679?text=Hi%20Viraaj%2C%20I%20saw%20Riya%20on%20your%20website.%20Can%20I%20see%20a%20live%20demo%3F"') && />Ask me for a live Riya demo <span class="btn__arrow"/.test(riyaRow));
 // No speed claims (owner, 26 Oct 2026).
 const speed = /in seconds|within seconds|instant|within the hour|in minutes|lightning|blazing/i;
 // Visitor-facing text lives in the pages and in the two scripts that write sentences.
@@ -437,6 +443,34 @@ await checkCursor({ browser, base: BASE, report });
   report('Escape closes the menu and returns focus to the menu button', back);
   await ctx.close();
 }
+
+// ---------- Network log: not one request to any viraajautomates.tech address ----------
+// Every page, scrolled top to bottom, the menu opened, the Riya row and its button hovered or tapped.
+{
+  const seen = [], tech = [];
+  for (const [w, h, m] of [[1440, 900, false], [375, 812, true]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: m, hasTouch: m });
+    ctx.on('request', (r) => { seen.push(r.url()); if (/viraajautomates\.tech/i.test(r.url())) tech.push(r.url()); });
+    const page = await ctx.newPage();
+    for (const path of ['/', '/work/smile-dental/', '/privacy.html', '/404.html']) {
+      await page.goto(BASE + path, { waitUntil: 'load' });
+      await page.evaluate(async () => { for (let y = 0; y <= document.documentElement.scrollHeight; y += 500) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 80)); } });
+      await page.waitForTimeout(600);
+    }
+    await page.goto(BASE + '/', { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    const menu = page.locator('[data-menu-btn]');
+    if (await menu.isVisible()) { await menu.click(); await page.waitForTimeout(600); await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
+    const shots = page.locator('.riya-shots');
+    await shots.scrollIntoViewIfNeeded();
+    if (m) await shots.tap(); else await shots.hover();
+    await page.locator('.riya-shots ~ .row__proof .btn').hover().catch(() => {});
+    await page.waitForTimeout(800);
+    await ctx.close();
+  }
+  report(`Network log: no request to any viraajautomates.tech address (${seen.length} requests, every page at 1440 and 375)`, seen.length > 50 && tech.length === 0, [...new Set(tech)].slice(0, 6).join(' | '));
+}
+
 await browser.close();
 // The summary, and the exit code: 1 when any check failed, 0 only when all passed.
 const failed = results.filter((r) => !r[1]);
