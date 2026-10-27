@@ -14,6 +14,7 @@ import { checkMono } from './check-mono.mjs';
 import { checkPortrait } from './check-portrait.mjs';
 import { checkPlug } from './check-plug.mjs';
 import { checkFidget } from './check-fidget.mjs';
+import { checkRiya, checkLighthouse } from './check-riya.mjs';
 
 const BASE = 'http://localhost:4173';
 const results = [];
@@ -49,11 +50,16 @@ const methodHits = siteText.filter(([, t]) => method.test(t)).map(([f, t]) => `$
 report('No stack or method named in the site (tool names, test links)', methodHits.length === 0, methodHits.join(' | '));
 // The demo site is never linked (owner, 26 Oct 2026): visitors ask on WhatsApp instead.
 // The demo site is linked once (owner, 26 Oct 2026, round 5): the Riya row's "Chat with Riya now ↗"; nowhere else.
+// Round 14 (owner, 27 Oct 2026): every "Chat with Riya now" link opens the Riya panel; the demo site is only
+// their no-JS fallback (new tab) and the panel's "Open the full demo clinic site ↗".
 const demoHost = ['demo', 'viraajautomates', 'tech'].join('.');
 const riyaDemo = `https://${demoHost}/?riya=open`;
 const demoHits = siteText.flatMap(([f, t]) => t.split(demoHost).slice(1).map(() => f));
 const riyaRow = index.split('<li class="row" data-row>')[3] || '';
-report('The demo site is linked only from the Riya row ("Chat with Riya now ↗", new tab)', demoHits.length === 1 && riyaRow.includes(`<a class="proof" href="${riyaDemo}" target="_blank" rel="noopener"`) && riyaRow.includes('>Chat with Riya now <span aria-hidden="true">↗</span>'), demoHits.join(' | '));
+const riyaLinks = siteText.filter(([f]) => f.endsWith('.html')).flatMap(([, t]) => t.split(`href="${riyaDemo}" target="_blank" rel="noopener" data-cursor="Chat" data-riya aria-haspopup="dialog">Chat with Riya now`).slice(1));
+const htmlDemo = demoHits.filter((f) => f.endsWith('.html')).length;
+const panelDemo = demoHits.filter((f) => f.endsWith('riya-panel.js')).length;
+report('The demo site is linked only from "Chat with Riya now" links (their no-JS fallback, new tab; the Riya row has one) and the Riya panel’s "Open the full demo clinic site ↗"', htmlDemo === riyaLinks.length && riyaLinks.length >= 6 && riyaRow.includes('data-riya') && panelDemo === 1 && demoHits.length === htmlDemo + panelDemo, demoHits.join(' | '));
 // No speed claims (owner, 26 Oct 2026).
 const speed = /in seconds|within seconds|instant|within the hour|in minutes|lightning|blazing/i;
 // Visitor-facing text lives in the pages and in the two scripts that write sentences.
@@ -99,7 +105,7 @@ const chats = Object.values(pages6).flatMap((t) => [...t.matchAll(/<div class="p
 report('Each Plug-in button has the mini WhatsApp chat (Viraaj, the message, time and ticks, "Free · on WhatsApp · within one working day", "Tap again to send")', chats.length === 8 && chats.every((c) => c.includes('<b>Viraaj</b><small>usually replies within a day</small>') && c.includes(`data-chat-rest>${PLUG_MSG}<`) && c.includes('data-chat-time') && c.includes('chat__ticks') && c.includes('Free · on WhatsApp · within one working day') && c.includes('Tap again to send')), `${chats.length} chats`);
 const heroCopy = index.slice(index.indexOf('<div class="hero__copy"'), index.indexOf('<div class="hero__strip"'));
 const heroKids = [...heroCopy.matchAll(/\n {6}<(\w+) class="([\w-]+)/g)].map((m) => m[2]).join();
-report('Hero holds only the H1, the sub-line and the Plug-in button (no place label); Mumbai and Pune stay in the description and structured data', heroKids === 'hero__title,hero__sub,plugin' && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
+report('Hero holds only the H1, the sub-line, the Plug-in button and the small "Chat with Riya now" link (no place label); Mumbai and Pune stay in the description and structured data', heroKids === 'hero__title,hero__sub,plugin,hero__riya' && /class="hero__riya"[^>]*><a class="proof riya-link"[^>]*data-riya/.test(heroCopy) && !/compose|hero__link|<input|plugin__micro/.test(heroCopy) && /data-plugin data-plugin-3d/.test(heroCopy)
   && !heroCopy.includes('Mumbai · Pune') && /name="description" content="[^"]*Mumbai and Pune/.test(index) && index.includes('"areaServed": ["Mumbai", "Pune"]') && heroCopy.includes('I help businesses get found on Google<br> and answer enquiries, even after hours.'), heroKids);
 const checkSec = index.slice(index.indexOf('id="check"'), index.indexOf('</section>', index.indexOf('id="check"')));
 report('Free report: the report teaser (statement and three steps) static, no field; "Unlock my free report"', !/<input|data-compose|data-report/i.test(checkSec) && /check__steps/.test(checkSec) && /data-plugin/.test(checkSec) && checkSec.includes('<span class="plugin__text">Unlock my free report</span>'));
@@ -107,6 +113,9 @@ report('No "Get my free check", no boxed arrows, no composer left', !/Get my fre
 report('"no lock-in" only in Plain terms', (copy.match(/lock-in/gi) || []).length === 1 && /id="terms"[\s\S]*?no lock-in[\s\S]*?<\/section>/.test(index));
 report('No negative reassurance words ("spam", "never share", "no hidden", "no charge")', !/\bspam\b|never share|no hidden|no charge|nothing is sold/i.test(copy));
 report('No source tags like "(hero)" in any WhatsApp text', !/text=[^"]*%20\((?:hero|footer|nav|menu|services|how|free|case|404)/.test(copy));
+
+// Lighthouse first, while the machine is idle (after the browser tests it scores lower for any version of the site).
+await checkLighthouse({ base: BASE, report });
 
 const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', args: ['--enable-unsafe-swiftshader'] });
 const fresh = (opts = {}) => browser.newContext({ viewport: { width: 1440, height: 900 }, ...opts });
@@ -393,6 +402,9 @@ await checkPlug({ base: BASE, report });
 
 // ---------- Fidgeting: unplug and plug back (mouse and touch), the first touch or scroll on a phone stays smooth ----------
 await checkFidget({ base: BASE, report });
+
+// ---------- The Riya panel: every link, live replies, errors, limits, sizes, no stack name ----------
+await checkRiya({ base: BASE, report });
 
 
 // ---------- The cursor: visible on dark and light sections, never over words ----------

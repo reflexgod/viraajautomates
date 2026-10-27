@@ -57,6 +57,23 @@ export function prefetchOnHover() {
   addEventListener('focusin', go);
 }
 
+// "Chat with Riya now" links open the Riya panel (js/riya-panel.js, with
+// css/riya.css), fetched the first time one is hovered, focused or touched, so
+// nothing of it loads with the page. Without JS the link opens the demo site.
+export function riyaLinks(lenis) {
+  const links = document.querySelectorAll('[data-riya]');
+  let panel = null;
+  const load = () => (panel ||= import('./riya-panel.js'));
+  links.forEach((a) => {
+    ['pointerenter', 'focus', 'touchstart'].forEach((t) => a.addEventListener(t, load, { once: true, passive: true }));
+    a.addEventListener('click', (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button > 0) return;
+      e.preventDefault();
+      load().then((m) => m.openRiya(a, { lenis }), () => location.assign(a.href));
+    });
+  });
+}
+
 export function setupMotion({ offset = 0 } = {}) {
   const { gsap, Lenis } = window;
   const motion = !reduced && !!gsap;

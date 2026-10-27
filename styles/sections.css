@@ -116,6 +116,24 @@
 }
 .proof:hover { background-image: linear-gradient(var(--ink), var(--ink)); }
 .proof--small { font-size: var(--fs-small); font-weight: 400; color: var(--ink-75); }
+/* "Chat with Riya now" (opens the Riya panel, js/riya-panel.js): on hover or
+   focus a tiny plug slides in after the words and a 2 px line draws under
+   them, left to right (0.35 s). Touch screens get no hover state. */
+.riya-link { position: relative; }
+.riya-link::after { content: ""; position: absolute; left: 0; right: 0; bottom: 9px; height: 2px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform .35s var(--ease); }
+.riya-link:not(.proof)::after { bottom: -3px; }
+.riya-link__plug { position: absolute; left: 100%; top: 50%; width: 14px; height: 10px; margin: -5px 0 0 6px; fill: currentColor; opacity: 0; transform: translateX(-6px); transition: opacity .35s var(--ease), transform .35s var(--ease); }
+@media (hover: hover) {
+  .riya-link:hover::after { transform: scaleX(1); }
+  .riya-link:hover .riya-link__plug { opacity: 1; transform: none; }
+}
+.riya-link:focus-visible::after { transform: scaleX(1); }
+.riya-link:focus-visible .riya-link__plug { opacity: 1; transform: none; }
+[data-theme="dark"] .riya-link.proof { color: var(--cream); background-image: linear-gradient(var(--cream-36), var(--cream-36)); }
+.hero__riya { margin-top: 6px; transition: opacity .3s var(--ease), visibility 0s linear .3s; }
+/* Phones: the button's mini chat opens over the space below it; the link steps aside meanwhile. */
+@media (max-width: 767px) { .hero__copy:has(.plugin.is-open) .hero__riya { opacity: 0; visibility: hidden; transition: opacity .2s var(--ease), visibility 0s linear .2s; } }
+.case-step__try { margin-top: 6px; }
 .row__micro { margin-top: -6px; font-size: 13px; color: var(--ink-62); }
 .row__list { display: grid; gap: 5px; padding: 4px 0 6px; font-size: var(--fs-small); line-height: 1.55; color: var(--ink-75); }
 .row__list li { position: relative; padding-left: 18px; }

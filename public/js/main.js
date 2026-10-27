@@ -1,6 +1,6 @@
 // Viraaj Automates: home page script.
 // Everything here is an enhancement: the page reads and every link works without it.
-import { setupMotion, savedScroll, restoreScroll, prefetchOnHover } from './core.js';
+import { setupMotion, savedScroll, restoreScroll, prefetchOnHover, riyaLinks } from './core.js';
 import { initClock } from './clock.js';
 import { initNav } from './nav.js';
 import { heroExit, startCable } from './hero.js';
@@ -26,6 +26,7 @@ initPreviews({ gsap, lenis });
 initPortrait();
 initTiles();
 prefetchOnHover();
+riyaLinks(lenis);
 
 if (!motion) {
   root.classList.add('reveal-done');

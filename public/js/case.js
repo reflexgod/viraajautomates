@@ -9,7 +9,7 @@
 //   Video     plays only while on screen; never by itself under reduced motion
 //             (poster); the Pause / Play button works with mouse, touch and keys.
 //   Step 03   Asha's row writes itself into the enquiry list, once, in view.
-import { setupMotion, restoreScroll, prefetchOnHover } from './core.js';
+import { setupMotion, restoreScroll, prefetchOnHover, riyaLinks } from './core.js';
 import { initClock } from './clock.js';
 import { initNav } from './nav.js';
 import { initReveals } from './reveal.js';
@@ -29,6 +29,7 @@ initNav({ gsap, lenis, goTo });
 initTiles();
 initPlugins();
 prefetchOnHover();
+riyaLinks(lenis);
 restoreScroll(lenis);
 
 /* ---------- Tabs ---------- */
